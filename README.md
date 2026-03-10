@@ -71,7 +71,7 @@ npx gologin-agent-browser-cli --help
 Developer setup from source:
 
 ```bash
-git clone https://gitlab.com/easync/agent-browser.git
+git clone https://github.com/GologinLabs/agent-browser.git
 cd agent-browser
 npm install
 npm run build

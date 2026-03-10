@@ -1,6 +1,6 @@
 {
   "name": "gologin-agent-browser-cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Agent-native cloud browser automation CLI for Gologin",
   "main": "dist/cli.js",
   "types": "dist/lib/types.d.ts",
@@ -23,11 +23,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/easync/agent-browser.git"
+    "url": "git+https://github.com/GologinLabs/agent-browser.git"
   },
-  "homepage": "https://gitlab.com/easync/agent-browser",
+  "homepage": "https://github.com/GologinLabs/agent-browser",
   "bugs": {
-    "url": "https://gitlab.com/easync/agent-browser/-/issues"
+    "url": "https://github.com/GologinLabs/agent-browser/issues"
   },
   "publishConfig": {
     "access": "public"
