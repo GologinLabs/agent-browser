@@ -77,6 +77,24 @@ npm install
 npm run build
 ```
 
+## Get a GoLogin Token
+
+You need a GoLogin account with API access before you can open cloud browser sessions.
+
+1. Sign up or log in at [GoLogin](https://gologin.com/).
+2. In the GoLogin dashboard, open `API & MCP`.
+3. Open the `API` tab.
+4. Click `New Token`.
+5. Copy the generated access token.
+
+Then export it in your shell:
+
+```bash
+export GOLOGIN_TOKEN='your_gologin_token'
+```
+
+If you prefer a local config file instead of an environment variable, save the same token to `~/.gologin-agent-browser/config.json`.
+
 ## Required Environment
 
 - `GOLOGIN_TOKEN` required for `open`
