@@ -1,0 +1,41 @@
+{
+  "name": "gologin-agent",
+  "version": "0.1.0",
+  "description": "Agent-native cloud browser automation CLI for GoLogin",
+  "main": "dist/cli.js",
+  "types": "dist/lib/types.d.ts",
+  "bin": {
+    "gologin-agent": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev:cli": "tsx src/cli.ts",
+    "dev:daemon": "tsx src/daemon/server.ts",
+    "test": "tsx --test tests/**/*.test.ts"
+  },
+  "keywords": [
+    "gologin",
+    "agent",
+    "cli",
+    "cloud-browser",
+    "anti-detect",
+    "fingerprint",
+    "proxy",
+    "playwright",
+    "browser"
+  ],
+  "author": "GoLogin",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
