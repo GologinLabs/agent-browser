@@ -4,6 +4,12 @@
   "description": "Agent-native cloud browser automation CLI for GoLogin",
   "main": "dist/cli.js",
   "types": "dist/lib/types.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "examples/agent-flow.sh"
+  ],
   "bin": {
     "gologin-agent": "dist/cli.js"
   },
@@ -12,7 +18,19 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dev:cli": "tsx src/cli.ts",
     "dev:daemon": "tsx src/daemon/server.ts",
-    "test": "tsx --test tests/**/*.test.ts"
+    "test": "tsx --test tests/**/*.test.ts",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/easync/agent-browser.git"
+  },
+  "homepage": "https://gitlab.com/easync/agent-browser",
+  "bugs": {
+    "url": "https://gitlab.com/easync/agent-browser/-/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "gologin",

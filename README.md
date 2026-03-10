@@ -48,19 +48,34 @@ Transport is local only:
 
 ## Installation
 
+Node.js 18+ is required.
+
+Install from npm:
+
 ```bash
-cd "/Users/eugene/Desktop/vibe coding projects/gologin-agent"
+npm install -g gologin-agent
+```
+
+Run it directly:
+
+```bash
+gologin-agent --help
+```
+
+Or use it without a global install:
+
+```bash
+npx gologin-agent --help
+```
+
+Developer setup from source:
+
+```bash
+git clone https://gitlab.com/easync/agent-browser.git
+cd agent-browser
 npm install
 npm run build
 ```
-
-Optional local linking:
-
-```bash
-npm link
-```
-
-After `npm link`, the `gologin-agent` command is available directly. Without linking, run `node dist/cli.js ...`.
 
 ## Required Environment
 
@@ -87,41 +102,35 @@ Save it as `~/.gologin-agent/config.json`.
 ```bash
 export GOLOGIN_TOKEN=your_token
 
-node dist/cli.js open https://example.com
-node dist/cli.js open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
-node dist/cli.js open https://example.com --profile your-preconfigured-gologin-profile
-node dist/cli.js snapshot -i
-node dist/cli.js current
-node dist/cli.js click @e3
-node dist/cli.js click "a[href*='iana']"
-node dist/cli.js fill "input[name='email']" "test@example.com"
-node dist/cli.js type @e4 "hello world"
-node dist/cli.js focus "input[name='email']"
-node dist/cli.js press Enter
-node dist/cli.js select "select[name='plan']" pro
-node dist/cli.js check "input[name='terms']"
-node dist/cli.js uncheck "input[name='newsletter']"
-node dist/cli.js scroll down 600
-node dist/cli.js scrollintoview "#submit"
-node dist/cli.js find label "Email" fill "test@example.com"
-node dist/cli.js upload "input[type='file']" ./fixtures/avatar.png
-node dist/cli.js get title
-node dist/cli.js wait --text "Welcome"
-node dist/cli.js pdf page.pdf
-node dist/cli.js screenshot page.png --annotate
-node dist/cli.js sessions
-node dist/cli.js close
-```
-
-If you linked the package:
-
-```bash
-gologin-agent open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080
+gologin-agent open https://example.com
 gologin-agent snapshot -i
+gologin-agent current
 gologin-agent click @e3
 gologin-agent fill "input[name='email']" "test@example.com"
+gologin-agent scroll down 600
+gologin-agent get title
+gologin-agent pdf page.pdf
 gologin-agent screenshot page.png --annotate
+gologin-agent sessions
 gologin-agent close
+```
+
+More examples:
+
+```bash
+gologin-agent open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
+gologin-agent open https://example.com --profile your-preconfigured-gologin-profile
+gologin-agent click "a[href*='iana']"
+gologin-agent type @e4 "hello world"
+gologin-agent focus "input[name='email']"
+gologin-agent press Enter
+gologin-agent select "select[name='plan']" pro
+gologin-agent check "input[name='terms']"
+gologin-agent uncheck "input[name='newsletter']"
+gologin-agent scrollintoview "#submit"
+gologin-agent find label "Email" fill "test@example.com"
+gologin-agent upload "input[type='file']" /absolute/path/to/avatar.png
+gologin-agent wait --text "Welcome"
 ```
 
 ## Commands
