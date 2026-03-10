@@ -53,7 +53,7 @@ Node.js 18+ is required.
 Install from npm:
 
 ```bash
-npm install -g gologin-agent
+npm install -g gologin-agent-browser-cli
 ```
 
 Run it directly:
@@ -65,7 +65,7 @@ gologin-agent --help
 Or use it without a global install:
 
 ```bash
-npx gologin-agent --help
+npx gologin-agent-browser-cli --help
 ```
 
 Developer setup from source:
