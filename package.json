@@ -1,6 +1,6 @@
 {
   "name": "gologin-agent-browser-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Agent-native cloud browser automation CLI for Gologin",
   "main": "dist/cli.js",
   "types": "dist/lib/types.d.ts",

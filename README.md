@@ -1,6 +1,6 @@
-# Gologin Agent CLI
+# Gologin Agent Browser CLI
 
-Gologin Agent CLI is a cloud browser automation CLI built for AI agents. It turns Gologin Cloud Browser into a persistent, scriptable runtime with compact page snapshots, ref-based interaction, session memory, and shell-friendly commands.
+Gologin Agent Browser CLI is a cloud browser automation CLI built for AI agents. It turns Gologin Cloud Browser into a persistent, scriptable runtime with compact page snapshots, ref-based interaction, session memory, and shell-friendly commands.
 
 It is designed for agent loops that need to stay simple:
 
@@ -22,7 +22,7 @@ Local-browser automation is convenient, but it comes with hard limits for agent 
 - local networking is limited unless you bolt on your own proxy layer
 - local sessions are harder to standardize across agents and environments
 
-Gologin Agent CLI takes the opposite approach:
+Gologin Agent Browser CLI takes the opposite approach:
 
 - cloud browser runtime instead of a local browser process
 - Gologin profiles as the session identity layer
@@ -93,6 +93,10 @@ Then export it in your shell:
 export GOLOGIN_TOKEN='your_gologin_token'
 ```
 
+API access depends on your Gologin account and plan. If token creation is unavailable in the dashboard, check your account access before troubleshooting the CLI.
+
+Note: the local daemon reads environment variables and config on startup. If you change `GOLOGIN_TOKEN` or `~/.gologin-agent-browser/config.json`, restart the daemon before running `open` again.
+
 If you prefer a local config file instead of an environment variable, save the same token to `~/.gologin-agent-browser/config.json`.
 
 ## Required Environment
@@ -118,28 +122,39 @@ Save it as `~/.gologin-agent-browser/config.json`.
 ## Quickstart
 
 ```bash
-export GOLOGIN_TOKEN=your_token
+export GOLOGIN_TOKEN='your_gologin_token'
 
 gologin-agent-browser open https://example.com
 gologin-agent-browser snapshot -i
-gologin-agent-browser current
 gologin-agent-browser click @e3
-gologin-agent-browser fill "input[name='email']" "test@example.com"
-gologin-agent-browser scroll down 600
-gologin-agent-browser get title
-gologin-agent-browser pdf page.pdf
-gologin-agent-browser screenshot page.png --annotate
-gologin-agent-browser sessions
 gologin-agent-browser close
 ```
 
-More examples:
+## How Refs Work
+
+`gologin-agent-browser snapshot` prints a compact page view and assigns refs like `@e1`, `@e2`, and `@e3`.
+
+Example:
+
+```text
+- link "More information..." [ref=@e3]
+```
+
+You can then act on that element with commands like:
+
+```bash
+gologin-agent-browser click @e3
+```
+
+Refs are best-effort and should be regenerated after navigation or major DOM changes.
+
+## More Examples
 
 ```bash
 gologin-agent-browser open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
 gologin-agent-browser open https://example.com --profile your-preconfigured-gologin-profile
 gologin-agent-browser click "a[href*='iana']"
-gologin-agent-browser type @e4 "hello world"
+gologin-agent-browser type "textarea[name='message']" "hello world"
 gologin-agent-browser focus "input[name='email']"
 gologin-agent-browser press Enter
 gologin-agent-browser select "select[name='plan']" pro
@@ -195,7 +210,7 @@ Agents can then use those refs:
 
 ```bash
 gologin-agent-browser click @e3
-gologin-agent-browser type @e4 "hello world"
+gologin-agent-browser check @e4
 gologin-agent-browser fill "input[name='email']" "test@example.com"
 gologin-agent-browser find role button click --name "Submit"
 gologin-agent-browser screenshot page.png --annotate
@@ -233,6 +248,15 @@ Supported aliases:
 - Gologin cloud live-view URLs are not auto-fetched by default because the current endpoint can interfere with an active CDP session.
 - Playwright is the automation layer on top of Gologin Cloud Browser. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
 
-## Live Smoke Check
+## Test Coverage
 
-The project includes a smoke test path that only runs when `GOLOGIN_TOKEN` is present in the environment. If `GOLOGIN_PROFILE_ID` is also set, the smoke flow can reuse that profile; otherwise Gologin can create a temporary session profile automatically. Secrets are never written into source files, tests, or examples.
+The repository includes unit tests for config loading, snapshot formatting, arg parsing, and URL construction.
+
+A full live browser smoke test is not shipped yet. If you want one, run a manual check with:
+
+```bash
+export GOLOGIN_TOKEN='your_gologin_token'
+gologin-agent-browser open https://example.com
+gologin-agent-browser snapshot -i
+gologin-agent-browser close
+```
