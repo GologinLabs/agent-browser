@@ -197,7 +197,16 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
     const screenshotSessionId = matchSessionRoute(pathname, "screenshot");
     if (method === "POST" && screenshotSessionId) {
       const body = (await readJsonBody(request)) as ScreenshotRequest;
-      writeJsonResponse(response, 200, await sessionManager.screenshot(screenshotSessionId, body.path, body.annotate === true));
+      writeJsonResponse(
+        response,
+        200,
+        await sessionManager.screenshot(
+          screenshotSessionId,
+          body.path,
+          body.annotate === true,
+          body.pressEscape === true
+        )
+      );
       return;
     }
 

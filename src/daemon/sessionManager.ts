@@ -39,6 +39,7 @@ import type {
 import {
   actionMutatesSnapshot,
   annotatePageWithRefs,
+  captureScreenshot,
   clearPageAnnotations,
   closeSessionHandles,
   connectToBrowser,
@@ -187,10 +188,15 @@ export class SessionManager {
     if (isRefTarget(target)) {
       const descriptor = this.refStore.get(session.sessionId, target);
       if (!descriptor) {
-        throw new AppError("REF_NOT_FOUND", `ref ${target} is not available in session ${session.sessionId}`, 404, {
-          ref: target,
-          sessionId: session.sessionId
-        });
+        throw new AppError(
+          "REF_NOT_FOUND",
+          `ref ${target} is stale or unavailable in session ${session.sessionId}; run snapshot again`,
+          404,
+          {
+            ref: target,
+            sessionId: session.sessionId
+          }
+        );
       }
 
       return resolveDescriptorLocator(session.page, descriptor);
@@ -563,11 +569,23 @@ export class SessionManager {
     };
   }
 
-  async screenshot(sessionId: string | undefined, targetPath: string, annotate = false): Promise<ScreenshotResponse> {
+  async screenshot(
+    sessionId: string | undefined,
+    targetPath: string,
+    annotate = false,
+    pressEscape = false
+  ): Promise<ScreenshotResponse> {
     const session = await this.getSessionOrThrow(sessionId);
+    let pressedEscape = false;
 
     try {
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+
+      if (pressEscape) {
+        await pressKey(session.page, "Escape", this.config.actionTimeoutMs);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        pressedEscape = true;
+      }
 
       if (annotate) {
         const snapshot = await buildSnapshot(session.page, { interactive: true });
@@ -597,10 +615,7 @@ export class SessionManager {
         await annotatePageWithRefs(session.page, labels);
       }
 
-      await session.page.screenshot({
-        path: targetPath,
-        fullPage: true
-      });
+      await captureScreenshot(session.page, targetPath, this.config.navigationTimeoutMs);
 
       if (annotate) {
         await clearPageAnnotations(session.page).catch(() => undefined);
@@ -609,9 +624,18 @@ export class SessionManager {
       if (annotate) {
         await clearPageAnnotations(session.page).catch(() => undefined);
       }
-      throw new AppError("SCREENSHOT_FAILED", error instanceof Error ? error.message : String(error), 500, {
-        path: targetPath
+      const baseMessage = error instanceof Error ? error.message : String(error);
+      const hint = pressEscape
+        ? "Screenshot timed out or failed even after pressing Escape"
+        : "Screenshot timed out or failed; try pressing Escape first or re-run with --press-escape";
+      throw new AppError("SCREENSHOT_FAILED", `${hint}: ${baseMessage}`, 500, {
+        path: targetPath,
+        pressEscape
       });
+    }
+
+    if (pressedEscape && !annotate && session.hasSnapshot) {
+      session.staleSnapshot = true;
     }
 
     session.lastScreenshotPath = targetPath;
@@ -621,7 +645,8 @@ export class SessionManager {
       sessionId: session.sessionId,
       path: targetPath,
       url: session.currentUrl,
-      annotated: annotate
+      annotated: annotate,
+      pressedEscape
     };
   }
 

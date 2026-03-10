@@ -148,6 +148,10 @@ gologin-agent-browser click @e3
 
 Refs are best-effort and should be regenerated after navigation or major DOM changes.
 
+Most mutating commands will leave the page in `snapshot=stale` state. When that happens, run `snapshot` again before using old refs.
+
+On dynamic pages, `find ...` is usually a better fallback than stale refs because it re-resolves against the live page instead of the last snapshot.
+
 ## More Examples
 
 ```bash
@@ -164,6 +168,7 @@ gologin-agent-browser scrollintoview "#submit"
 gologin-agent-browser find label "Email" fill "test@example.com"
 gologin-agent-browser upload "input[type='file']" /absolute/path/to/avatar.png
 gologin-agent-browser wait --text "Welcome"
+gologin-agent-browser screenshot page.png --annotate --press-escape
 ```
 
 ## Commands
@@ -188,7 +193,7 @@ gologin-agent-browser wait --text "Welcome"
 - `find <role|text|label|placeholder|first|last|nth> ...`
 - `upload <target> <file...> [--session <sessionId>]`
 - `pdf <path> [--session <sessionId>]`
-- `screenshot <path> [--annotate] [--session <sessionId>]`
+- `screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]`
 - `close [--session <sessionId>]`
 - `sessions`
 - `current`
@@ -218,6 +223,8 @@ gologin-agent-browser screenshot page.png --annotate
 
 Targets can be either snapshot refs like `@e4` or raw Playwright/CSS selectors. `find` adds semantic locator flows similar to agent-browser.
 
+If a ref stops resolving after navigation or a DOM update, prefer a fresh `snapshot` or use a semantic `find ...` command instead.
+
 `open`, `current`, and `sessions` also expose session metadata in a shell-friendly form:
 
 ```text
@@ -240,6 +247,7 @@ Supported aliases:
 - Snapshot and ref resolution are best-effort. Dynamic pages can invalidate refs after heavy DOM changes or navigation.
 - Snapshot output is compact and accessibility-informed, but it is not a full accessibility tree dump.
 - Annotated screenshots are based on the current snapshot/ref model, so labels are also best-effort on highly dynamic pages.
+- `screenshot` has a hard timeout and supports `--press-escape` for pages with modals, chat widgets, or overlay-driven render issues.
 - The daemon keeps only the latest snapshot ref map for each session.
 - Real browser sessions require a valid Gologin Cloud Browser account and token. A profile id is optional.
 - Token-only mode works by provisioning a temporary cloud profile through the Gologin API before connecting to Cloud Browser.

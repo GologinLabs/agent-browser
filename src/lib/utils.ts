@@ -20,7 +20,7 @@ export type ParsedArgs = {
 export function parseArgs(argv: string[]): ParsedArgs {
   const positional: string[] = [];
   const flags: Record<string, string | boolean> = {};
-  const booleanFlags = new Set(["interactive", "exact", "annotate"]);
+  const booleanFlags = new Set(["interactive", "exact", "annotate", "press-escape"]);
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];

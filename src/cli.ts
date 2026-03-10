@@ -91,7 +91,7 @@ function printUsage(): void {
       "  find <role|text|label|placeholder|first|last|nth> ... [--exact]",
       "  upload <target> <file...> [--session <sessionId>]",
       "  pdf <path> [--session <sessionId>]",
-      "  screenshot <path> [--annotate] [--session <sessionId>]",
+      "  screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]",
       "  close [--session <sessionId>] (aliases: quit, exit)",
       "  sessions",
       "  current",

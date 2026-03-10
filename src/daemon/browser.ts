@@ -418,9 +418,14 @@ export async function resolveDescriptorLocator(page: Page, descriptor: RefDescri
     }
   }
 
-  throw new AppError("REF_NOT_FOUND", `ref ${descriptor.ref} is not available on the current page`, 404, {
-    ref: descriptor.ref
-  });
+  throw new AppError(
+    "REF_NOT_FOUND",
+    `ref ${descriptor.ref} is stale or unavailable on the current page; run snapshot again`,
+    404,
+    {
+      ref: descriptor.ref
+    }
+  );
 }
 
 export async function resolveSelectorLocator(page: Page, selector: string, timeoutMs: number): Promise<Locator> {
@@ -604,6 +609,14 @@ export async function savePdf(page: Page, targetPath: string): Promise<void> {
     path: targetPath,
     format: "A4",
     printBackground: true
+  });
+}
+
+export async function captureScreenshot(page: Page, targetPath: string, timeoutMs: number): Promise<void> {
+  await page.screenshot({
+    path: targetPath,
+    fullPage: true,
+    timeout: timeoutMs
   });
 }
 

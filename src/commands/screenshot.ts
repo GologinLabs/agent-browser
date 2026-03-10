@@ -8,9 +8,14 @@ export async function runScreenshotCommand(context: CommandContext, argv: string
   const inputPath = parsed.positional[0];
   const sessionId = getFlagString(parsed, "session");
   const annotate = getFlagBoolean(parsed, "annotate");
+  const pressEscape = getFlagBoolean(parsed, "press-escape");
 
   if (!inputPath) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser screenshot <path> [--session <sessionId>]", 400);
+    throw new AppError(
+      "BAD_REQUEST",
+      "Usage: gologin-agent-browser screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]",
+      400
+    );
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);
@@ -18,9 +23,10 @@ export async function runScreenshotCommand(context: CommandContext, argv: string
   const response = await context.client.request<ScreenshotResponse>(
     "POST",
     `/sessions/${resolvedSessionId}/screenshot`,
-    { path: targetPath, annotate }
+    { path: targetPath, annotate, pressEscape }
   );
 
   const annotated = response.annotated ? " annotated=yes" : "";
-  context.stdout.write(`screenshot=${response.path} session=${response.sessionId}${annotated}\n`);
+  const escaped = response.pressedEscape ? " escape=yes" : "";
+  context.stdout.write(`screenshot=${response.path} session=${response.sessionId}${annotated}${escaped}\n`);
 }

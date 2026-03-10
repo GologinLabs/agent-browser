@@ -14,11 +14,12 @@ test("parseArgs handles flags and positionals", () => {
   assert.equal(parsed.flags.interactive, true);
 });
 
-test("parseArgs supports short interactive flag and exact boolean flag", () => {
-  const parsed = parseArgs(["-i", "--exact", "--annotate", "button"]);
+test("parseArgs supports short interactive flag and boolean flags", () => {
+  const parsed = parseArgs(["-i", "--exact", "--annotate", "--press-escape", "button"]);
   assert.equal(parsed.flags.interactive, true);
   assert.equal(parsed.flags.exact, true);
   assert.equal(parsed.flags.annotate, true);
+  assert.equal(parsed.flags["press-escape"], true);
   assert.deepEqual(parsed.positional, ["button"]);
 });
 

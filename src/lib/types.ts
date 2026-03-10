@@ -199,6 +199,7 @@ export interface PressResponse extends ActionResponse {}
 export interface ScreenshotRequest {
   path: string;
   annotate?: boolean;
+  pressEscape?: boolean;
 }
 
 export interface ScreenshotResponse {
@@ -206,6 +207,7 @@ export interface ScreenshotResponse {
   path: string;
   url: string;
   annotated?: boolean;
+  pressedEscape?: boolean;
 }
 
 export interface CloseSessionResponse {
