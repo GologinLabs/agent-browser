@@ -1,6 +1,6 @@
-# GoLogin Agent CLI
+# Gologin Agent CLI
 
-GoLogin Agent CLI is a cloud browser automation CLI built for AI agents. It turns GoLogin Cloud Browser into a persistent, scriptable runtime with compact page snapshots, ref-based interaction, session memory, and shell-friendly commands.
+Gologin Agent CLI is a cloud browser automation CLI built for AI agents. It turns Gologin Cloud Browser into a persistent, scriptable runtime with compact page snapshots, ref-based interaction, session memory, and shell-friendly commands.
 
 It is designed for agent loops that need to stay simple:
 
@@ -10,7 +10,7 @@ It is designed for agent loops that need to stay simple:
 - keep working across multiple CLI calls through a local daemon
 - save artifacts such as screenshots and PDFs when needed
 
-Unlike local-browser automation tools, it runs on top of a cloud browser stack built around GoLogin profiles, proxies, fingerprinting, and anti-detect capabilities.
+Unlike local-browser automation tools, it runs on top of a cloud browser stack built around Gologin profiles, proxies, fingerprinting, and anti-detect capabilities.
 
 ## Why Cloud Browser
 
@@ -22,12 +22,12 @@ Local-browser automation is convenient, but it comes with hard limits for agent 
 - local networking is limited unless you bolt on your own proxy layer
 - local sessions are harder to standardize across agents and environments
 
-GoLogin Agent CLI takes the opposite approach:
+Gologin Agent CLI takes the opposite approach:
 
 - cloud browser runtime instead of a local browser process
-- GoLogin profiles as the session identity layer
+- Gologin profiles as the session identity layer
 - proxy-aware browser sessions
-- fingerprint and anti-detect capabilities inherited from GoLogin
+- fingerprint and anti-detect capabilities inherited from Gologin
 - a persistent daemon that keeps agent sessions alive across CLI calls
 
 ## Architecture
@@ -37,9 +37,9 @@ The system has two parts:
 - `gologin-agent-browser` CLI
 - a persistent local daemon
 
-The CLI parses commands, auto-starts the daemon when needed, and prints compact output for agents. The daemon owns live browser sessions, connects to GoLogin Cloud Browser through Playwright `connectOverCDP`, keeps the active page in memory, builds snapshots, resolves refs like `@e1`, and tracks session metadata such as proxy mode, idle timeout, and generated artifacts.
+The CLI parses commands, auto-starts the daemon when needed, and prints compact output for agents. The daemon owns live browser sessions, connects to Gologin Cloud Browser through Playwright `connectOverCDP`, keeps the active page in memory, builds snapshots, resolves refs like `@e1`, and tracks session metadata such as proxy mode, idle timeout, and generated artifacts.
 
-If you do not provide a profile id, the daemon creates a temporary GoLogin cloud profile through the GoLogin API, uses it to open the session, and attempts to delete it when the session is closed.
+If you do not provide a profile id, the daemon creates a temporary Gologin cloud profile through the Gologin API, uses it to open the session, and attempts to delete it when the session is closed.
 
 Transport is local only:
 
@@ -77,12 +77,12 @@ npm install
 npm run build
 ```
 
-## Get a GoLogin Token
+## Get a Gologin Token
 
-You need a GoLogin account with API access before you can open cloud browser sessions.
+You need a Gologin account with API access before you can open cloud browser sessions.
 
-1. Sign up or log in at [GoLogin](https://gologin.com/).
-2. In the GoLogin dashboard, open `API & MCP`.
+1. Sign up or log in at [Gologin](https://gologin.com/).
+2. In the Gologin dashboard, open `API & MCP`.
 3. Open the `API` tab.
 4. Click `New Token`.
 5. Copy the generated access token.
@@ -221,18 +221,18 @@ Supported aliases:
 ## Current Scope
 
 - Session persistence lasts as long as the local daemon is running. Restarting the daemon clears in-memory sessions and refs.
-- Idle timeout is a local daemon policy. It does not change GoLogin account-level cloud limits.
+- Idle timeout is a local daemon policy. It does not change Gologin account-level cloud limits.
 - Snapshot and ref resolution are best-effort. Dynamic pages can invalidate refs after heavy DOM changes or navigation.
 - Snapshot output is compact and accessibility-informed, but it is not a full accessibility tree dump.
 - Annotated screenshots are based on the current snapshot/ref model, so labels are also best-effort on highly dynamic pages.
 - The daemon keeps only the latest snapshot ref map for each session.
-- Real browser sessions require a valid GoLogin Cloud Browser account and token. A profile id is optional.
-- Token-only mode works by provisioning a temporary cloud profile through the GoLogin API before connecting to Cloud Browser.
-- Proxy support is cloud-profile based. Temporary profiles can be created with a custom proxy definition, and existing GoLogin profiles can be reused with `--profile` if they already have a managed proxy attached.
-- Local Orbita is intentionally out of scope. This project targets GoLogin Cloud Browser only.
-- GoLogin cloud live-view URLs are not auto-fetched by default because the current endpoint can interfere with an active CDP session.
-- Playwright is the automation layer on top of GoLogin Cloud Browser. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
+- Real browser sessions require a valid Gologin Cloud Browser account and token. A profile id is optional.
+- Token-only mode works by provisioning a temporary cloud profile through the Gologin API before connecting to Cloud Browser.
+- Proxy support is cloud-profile based. Temporary profiles can be created with a custom proxy definition, and existing Gologin profiles can be reused with `--profile` if they already have a managed proxy attached.
+- Local Orbita is intentionally out of scope. This project targets Gologin Cloud Browser only.
+- Gologin cloud live-view URLs are not auto-fetched by default because the current endpoint can interfere with an active CDP session.
+- Playwright is the automation layer on top of Gologin Cloud Browser. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
 
 ## Live Smoke Check
 
-The project includes a smoke test path that only runs when `GOLOGIN_TOKEN` is present in the environment. If `GOLOGIN_PROFILE_ID` is also set, the smoke flow can reuse that profile; otherwise GoLogin can create a temporary session profile automatically. Secrets are never written into source files, tests, or examples.
+The project includes a smoke test path that only runs when `GOLOGIN_TOKEN` is present in the environment. If `GOLOGIN_PROFILE_ID` is also set, the smoke flow can reuse that profile; otherwise Gologin can create a temporary session profile automatically. Secrets are never written into source files, tests, or examples.

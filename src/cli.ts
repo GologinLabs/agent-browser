@@ -66,7 +66,7 @@ type CommandName =
 function printUsage(): void {
   process.stderr.write(
     [
-      "GoLogin Agent CLI",
+      "Gologin Agent CLI",
       "",
       "Usage:",
       "  gologin-agent-browser <command> [args] [options]",

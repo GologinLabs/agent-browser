@@ -290,7 +290,7 @@ process.on("SIGTERM", () => {
 
 startServers()
   .then(() => {
-    logInfo("GoLogin Agent daemon started");
+    logInfo("Gologin Agent daemon started");
   })
   .catch((error) => {
     logError("Failed to start daemon", error);

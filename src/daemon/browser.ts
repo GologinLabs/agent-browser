@@ -172,13 +172,13 @@ export async function createQuickProfile(token: string, sessionId: string): Prom
   });
 
   if (!response.ok) {
-    throw new AppError("BROWSER_CONNECTION_FAILED", `Failed to create GoLogin profile: ${response.status}`, 502);
+    throw new AppError("BROWSER_CONNECTION_FAILED", `Failed to create Gologin profile: ${response.status}`, 502);
   }
 
   const payload = (await response.json()) as unknown;
   const profileId = extractProfileId(payload);
   if (!profileId) {
-    throw new AppError("BROWSER_CONNECTION_FAILED", "GoLogin profile creation returned no profile id", 502);
+    throw new AppError("BROWSER_CONNECTION_FAILED", "Gologin profile creation returned no profile id", 502);
   }
 
   return profileId;
@@ -205,13 +205,13 @@ export async function createManagedProfile(
   });
 
   if (!response.ok) {
-    throw new AppError("BROWSER_CONNECTION_FAILED", `Failed to create GoLogin cloud profile: ${response.status}`, 502);
+    throw new AppError("BROWSER_CONNECTION_FAILED", `Failed to create Gologin cloud profile: ${response.status}`, 502);
   }
 
   const payload = (await response.json()) as unknown;
   const profileId = extractProfileId(payload);
   if (!profileId) {
-    throw new AppError("BROWSER_CONNECTION_FAILED", "GoLogin profile creation returned no profile id", 502);
+    throw new AppError("BROWSER_CONNECTION_FAILED", "Gologin profile creation returned no profile id", 502);
   }
 
   let proxySummary: ProxySummary | undefined;
@@ -234,7 +234,7 @@ export async function deleteProfile(token: string, profileId: string): Promise<v
   });
 
   if (!response.ok) {
-    throw new AppError("BROWSER_CONNECTION_FAILED", `Failed to delete GoLogin profile ${profileId}`, 502, {
+    throw new AppError("BROWSER_CONNECTION_FAILED", `Failed to delete Gologin profile ${profileId}`, 502, {
       profileId
     });
   }

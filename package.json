@@ -1,7 +1,7 @@
 {
   "name": "gologin-agent-browser-cli",
-  "version": "0.1.0",
-  "description": "Agent-native cloud browser automation CLI for GoLogin",
+  "version": "0.1.1",
+  "description": "Agent-native cloud browser automation CLI for Gologin",
   "main": "dist/cli.js",
   "types": "dist/lib/types.d.ts",
   "files": [
@@ -43,7 +43,7 @@
     "playwright",
     "browser"
   ],
-  "author": "GoLogin",
+  "author": "Gologin",
   "license": "MIT",
   "engines": {
     "node": ">=18"
