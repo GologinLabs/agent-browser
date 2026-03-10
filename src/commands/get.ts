@@ -12,7 +12,7 @@ export async function runGetCommand(context: CommandContext, argv: string[]): Pr
   const sessionId = getFlagString(parsed, "session");
 
   if (!kind || !GET_KINDS.has(kind)) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent get <text|value|html|title|url> [target] [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser get <text|value|html|title|url> [target] [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

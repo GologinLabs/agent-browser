@@ -69,7 +69,7 @@ function normalizeProxySummary(proxy: unknown, fallback?: ProxyConfig): ProxySum
 
 function buildCloudProfileBody(sessionId: string, proxy?: ProxyConfig): Record<string, unknown> {
   const body: Record<string, unknown> = {
-    name: `gologin-agent-${sessionId}`,
+    name: `gologin-agent-browser-${sessionId}`,
     os: "lin"
   };
 
@@ -166,7 +166,7 @@ export async function createQuickProfile(token: string, sessionId: string): Prom
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      name: `gologin-agent-${sessionId}`,
+      name: `gologin-agent-browser-${sessionId}`,
       os: "lin"
     })
   });
@@ -612,10 +612,10 @@ export async function annotatePageWithRefs(
   refs: Array<{ ref: string; x: number; y: number }>
 ): Promise<void> {
   await page.evaluate((labels) => {
-    document.getElementById("__gologin-agent-annotations")?.remove();
+    document.getElementById("__gologin-agent-browser-annotations")?.remove();
 
     const root = document.createElement("div");
-    root.id = "__gologin-agent-annotations";
+    root.id = "__gologin-agent-browser-annotations";
     root.style.position = "absolute";
     root.style.left = "0";
     root.style.top = "0";
@@ -646,7 +646,7 @@ export async function annotatePageWithRefs(
 
 export async function clearPageAnnotations(page: Page): Promise<void> {
   await page.evaluate(() => {
-    document.getElementById("__gologin-agent-annotations")?.remove();
+    document.getElementById("__gologin-agent-browser-annotations")?.remove();
   });
 }
 

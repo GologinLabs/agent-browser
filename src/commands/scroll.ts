@@ -13,7 +13,7 @@ export async function runScrollCommand(context: CommandContext, argv: string[]):
   const sessionId = getFlagString(parsed, "session");
 
   if (!direction || !SCROLL_DIRECTIONS.has(direction)) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent scroll <up|down|left|right> [pixels] [--target <target>] [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser scroll <up|down|left|right> [pixels] [--target <target>] [--session <sessionId>]", 400);
   }
 
   if (maybePixels && !isNumericToken(maybePixels)) {

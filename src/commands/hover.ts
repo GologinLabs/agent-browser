@@ -9,7 +9,7 @@ export async function runHoverCommand(context: CommandContext, argv: string[]): 
   const sessionId = getFlagString(parsed, "session");
 
   if (!target) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent hover <target> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser hover <target> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

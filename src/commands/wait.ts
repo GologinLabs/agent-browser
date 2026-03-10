@@ -42,7 +42,7 @@ export async function runWaitCommand(context: CommandContext, argv: string[]): P
   if (!body.target && !body.text && !body.urlPattern && !body.loadState && body.timeoutMs === undefined) {
     throw new AppError(
       "BAD_REQUEST",
-      "Usage: gologin-agent wait <target|ms> [--text <text>] [--url <pattern>] [--load <state>] [--session <sessionId>]",
+      "Usage: gologin-agent-browser wait <target|ms> [--text <text>] [--url <pattern>] [--load <state>] [--session <sessionId>]",
       400
     );
   }

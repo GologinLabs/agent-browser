@@ -34,7 +34,7 @@ GoLogin Agent CLI takes the opposite approach:
 
 The system has two parts:
 
-- `gologin-agent` CLI
+- `gologin-agent-browser` CLI
 - a persistent local daemon
 
 The CLI parses commands, auto-starts the daemon when needed, and prints compact output for agents. The daemon owns live browser sessions, connects to GoLogin Cloud Browser through Playwright `connectOverCDP`, keeps the active page in memory, builds snapshots, resolves refs like `@e1`, and tracks session metadata such as proxy mode, idle timeout, and generated artifacts.
@@ -43,7 +43,7 @@ If you do not provide a profile id, the daemon creates a temporary GoLogin cloud
 
 Transport is local only:
 
-- Unix socket at `${TMPDIR:-/tmp}/gologin-agent.sock` on Unix-like systems
+- Unix socket at `${TMPDIR:-/tmp}/gologin-agent-browser.sock` on Unix-like systems
 - localhost HTTP on `127.0.0.1:${GOLOGIN_DAEMON_PORT:-44777}`
 
 ## Installation
@@ -59,7 +59,7 @@ npm install -g gologin-agent-browser-cli
 Run it directly:
 
 ```bash
-gologin-agent --help
+gologin-agent-browser --help
 ```
 
 Or use it without a global install:
@@ -95,42 +95,42 @@ Optional config file:
 }
 ```
 
-Save it as `~/.gologin-agent/config.json`.
+Save it as `~/.gologin-agent-browser/config.json`.
 
 ## Quickstart
 
 ```bash
 export GOLOGIN_TOKEN=your_token
 
-gologin-agent open https://example.com
-gologin-agent snapshot -i
-gologin-agent current
-gologin-agent click @e3
-gologin-agent fill "input[name='email']" "test@example.com"
-gologin-agent scroll down 600
-gologin-agent get title
-gologin-agent pdf page.pdf
-gologin-agent screenshot page.png --annotate
-gologin-agent sessions
-gologin-agent close
+gologin-agent-browser open https://example.com
+gologin-agent-browser snapshot -i
+gologin-agent-browser current
+gologin-agent-browser click @e3
+gologin-agent-browser fill "input[name='email']" "test@example.com"
+gologin-agent-browser scroll down 600
+gologin-agent-browser get title
+gologin-agent-browser pdf page.pdf
+gologin-agent-browser screenshot page.png --annotate
+gologin-agent-browser sessions
+gologin-agent-browser close
 ```
 
 More examples:
 
 ```bash
-gologin-agent open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
-gologin-agent open https://example.com --profile your-preconfigured-gologin-profile
-gologin-agent click "a[href*='iana']"
-gologin-agent type @e4 "hello world"
-gologin-agent focus "input[name='email']"
-gologin-agent press Enter
-gologin-agent select "select[name='plan']" pro
-gologin-agent check "input[name='terms']"
-gologin-agent uncheck "input[name='newsletter']"
-gologin-agent scrollintoview "#submit"
-gologin-agent find label "Email" fill "test@example.com"
-gologin-agent upload "input[type='file']" /absolute/path/to/avatar.png
-gologin-agent wait --text "Welcome"
+gologin-agent-browser open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
+gologin-agent-browser open https://example.com --profile your-preconfigured-gologin-profile
+gologin-agent-browser click "a[href*='iana']"
+gologin-agent-browser type @e4 "hello world"
+gologin-agent-browser focus "input[name='email']"
+gologin-agent-browser press Enter
+gologin-agent-browser select "select[name='plan']" pro
+gologin-agent-browser check "input[name='terms']"
+gologin-agent-browser uncheck "input[name='newsletter']"
+gologin-agent-browser scrollintoview "#submit"
+gologin-agent-browser find label "Email" fill "test@example.com"
+gologin-agent-browser upload "input[type='file']" /absolute/path/to/avatar.png
+gologin-agent-browser wait --text "Welcome"
 ```
 
 ## Commands
@@ -176,11 +176,11 @@ session=s1 url=https://example.com/
 Agents can then use those refs:
 
 ```bash
-gologin-agent click @e3
-gologin-agent type @e4 "hello world"
-gologin-agent fill "input[name='email']" "test@example.com"
-gologin-agent find role button click --name "Submit"
-gologin-agent screenshot page.png --annotate
+gologin-agent-browser click @e3
+gologin-agent-browser type @e4 "hello world"
+gologin-agent-browser fill "input[name='email']" "test@example.com"
+gologin-agent-browser find role button click --name "Submit"
+gologin-agent-browser screenshot page.png --annotate
 ```
 
 Targets can be either snapshot refs like `@e4` or raw Playwright/CSS selectors. `find` adds semantic locator flows similar to agent-browser.

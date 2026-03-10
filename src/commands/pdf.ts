@@ -9,7 +9,7 @@ export async function runPdfCommand(context: CommandContext, argv: string[]): Pr
   const sessionId = getFlagString(parsed, "session");
 
   if (!inputPath) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent pdf <path> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser pdf <path> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

@@ -10,7 +10,7 @@ export async function runFillCommand(context: CommandContext, argv: string[]): P
   const sessionId = getFlagString(parsed, "session");
 
   if (!target || !text) {
-    throw new AppError("BAD_REQUEST", 'Usage: gologin-agent fill <target> <text> [--session <sessionId>]', 400);
+    throw new AppError("BAD_REQUEST", 'Usage: gologin-agent-browser fill <target> <text> [--session <sessionId>]', 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

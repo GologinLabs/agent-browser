@@ -37,10 +37,10 @@ function readConfigFile(configPath: string): FileConfig {
 
 export function loadConfig(): AgentConfig {
   const homeDir = os.homedir();
-  const baseDir = path.join(homeDir, ".gologin-agent");
+  const baseDir = path.join(homeDir, ".gologin-agent-browser");
   const configPath = path.join(baseDir, "config.json");
   const logPath = path.join(baseDir, "daemon.log");
-  const socketPath = path.join(os.tmpdir(), "gologin-agent.sock");
+  const socketPath = path.join(os.tmpdir(), "gologin-agent-browser.sock");
   const fileConfig = readConfigFile(configPath);
 
   return {

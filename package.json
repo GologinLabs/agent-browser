@@ -11,7 +11,7 @@
     "examples/agent-flow.sh"
   ],
   "bin": {
-    "gologin-agent": "dist/cli.js"
+    "gologin-agent-browser": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

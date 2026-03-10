@@ -22,7 +22,7 @@ function parseFindLocator(positional: string[]): {
     const action = positional[2] as SemanticFindAction | undefined;
     const value = positional.slice(3).join(" ") || undefined;
     if (!role || !action || !ACTIONS.has(action)) {
-      throw new AppError("BAD_REQUEST", "Usage: gologin-agent find role <role> <action> [value] [--name <name>]", 400);
+      throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser find role <role> <action> [value] [--name <name>]", 400);
     }
     return { locator: { strategy: "role", role }, action, value };
   }
@@ -32,7 +32,7 @@ function parseFindLocator(positional: string[]): {
     const action = positional[2] as SemanticFindAction | undefined;
     const value = positional.slice(3).join(" ") || undefined;
     if (!text || !action || !ACTIONS.has(action)) {
-      throw new AppError("BAD_REQUEST", "Usage: gologin-agent find text <text> <action> [value]", 400);
+      throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser find text <text> <action> [value]", 400);
     }
     return { locator: { strategy: "text", text }, action, value };
   }
@@ -42,7 +42,7 @@ function parseFindLocator(positional: string[]): {
     const action = positional[2] as SemanticFindAction | undefined;
     const value = positional.slice(3).join(" ") || undefined;
     if (!label || !action || !ACTIONS.has(action)) {
-      throw new AppError("BAD_REQUEST", "Usage: gologin-agent find label <label> <action> [value]", 400);
+      throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser find label <label> <action> [value]", 400);
     }
     return { locator: { strategy: "label", label }, action, value };
   }
@@ -52,7 +52,7 @@ function parseFindLocator(positional: string[]): {
     const action = positional[2] as SemanticFindAction | undefined;
     const value = positional.slice(3).join(" ") || undefined;
     if (!placeholder || !action || !ACTIONS.has(action)) {
-      throw new AppError("BAD_REQUEST", "Usage: gologin-agent find placeholder <placeholder> <action> [value]", 400);
+      throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser find placeholder <placeholder> <action> [value]", 400);
     }
     return { locator: { strategy: "placeholder", placeholder }, action, value };
   }
@@ -62,7 +62,7 @@ function parseFindLocator(positional: string[]): {
     const action = positional[2] as SemanticFindAction | undefined;
     const value = positional.slice(3).join(" ") || undefined;
     if (!selector || !action || !ACTIONS.has(action)) {
-      throw new AppError("BAD_REQUEST", `Usage: gologin-agent find ${mode} <selector> <action> [value]`, 400);
+      throw new AppError("BAD_REQUEST", `Usage: gologin-agent-browser find ${mode} <selector> <action> [value]`, 400);
     }
     return { locator: { strategy: mode, selector }, action, value };
   }
@@ -73,14 +73,14 @@ function parseFindLocator(positional: string[]): {
     const action = positional[3] as SemanticFindAction | undefined;
     const value = positional.slice(4).join(" ") || undefined;
     if (!nth || !selector || !action || !ACTIONS.has(action) || Number.isNaN(Number(nth))) {
-      throw new AppError("BAD_REQUEST", "Usage: gologin-agent find nth <n> <selector> <action> [value]", 400);
+      throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser find nth <n> <selector> <action> [value]", 400);
     }
     return { locator: { strategy: "nth", selector, nth: Number(nth) }, action, value };
   }
 
   throw new AppError(
     "BAD_REQUEST",
-    "Usage: gologin-agent find <role|text|label|placeholder|first|last|nth> ...",
+    "Usage: gologin-agent-browser find <role|text|label|placeholder|first|last|nth> ...",
     400
   );
 }

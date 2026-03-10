@@ -10,7 +10,7 @@ const config: AgentConfig = {
   connectBase: "https://cloudbrowser.gologin.com/connect",
   daemonPort: 44777,
   daemonHost: "127.0.0.1",
-  socketPath: "/tmp/gologin-agent.sock",
+  socketPath: "/tmp/gologin-agent-browser.sock",
   configPath: "/tmp/config.json",
   logPath: "/tmp/daemon.log",
   navigationTimeoutMs: 30_000,

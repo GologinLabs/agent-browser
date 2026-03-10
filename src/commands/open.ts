@@ -65,7 +65,7 @@ export async function runOpenCommand(context: CommandContext, argv: string[]): P
   if (!url) {
     throw new AppError(
       "BAD_REQUEST",
-      "Usage: gologin-agent open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port>]",
+      "Usage: gologin-agent-browser open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port>]",
       400
     );
   }

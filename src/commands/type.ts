@@ -10,7 +10,7 @@ export async function runTypeCommand(context: CommandContext, argv: string[]): P
   const sessionId = getFlagString(parsed, "session");
 
   if (!target || !text) {
-    throw new AppError("BAD_REQUEST", 'Usage: gologin-agent type <target> <text> [--session <sessionId>]', 400);
+    throw new AppError("BAD_REQUEST", 'Usage: gologin-agent-browser type <target> <text> [--session <sessionId>]', 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

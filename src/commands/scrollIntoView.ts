@@ -9,7 +9,7 @@ export async function runScrollIntoViewCommand(context: CommandContext, argv: st
   const sessionId = getFlagString(parsed, "session");
 
   if (!target) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent scrollintoview <target> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser scrollintoview <target> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

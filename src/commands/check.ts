@@ -9,7 +9,7 @@ export async function runCheckCommand(context: CommandContext, argv: string[]): 
   const sessionId = getFlagString(parsed, "session");
 
   if (!target) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent check <target> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser check <target> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

@@ -10,7 +10,7 @@ export async function runScreenshotCommand(context: CommandContext, argv: string
   const annotate = getFlagBoolean(parsed, "annotate");
 
   if (!inputPath) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent screenshot <path> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser screenshot <path> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

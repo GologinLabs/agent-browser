@@ -69,7 +69,7 @@ function printUsage(): void {
       "GoLogin Agent CLI",
       "",
       "Usage:",
-      "  gologin-agent <command> [args] [options]",
+      "  gologin-agent-browser <command> [args] [options]",
       "",
       "Commands:",
       "  open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5>] (aliases: goto, navigate)",

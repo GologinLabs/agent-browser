@@ -10,7 +10,7 @@ export async function runUploadCommand(context: CommandContext, argv: string[]):
   const sessionId = getFlagString(parsed, "session");
 
   if (!target || files.length === 0) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent upload <target> <file...> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser upload <target> <file...> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

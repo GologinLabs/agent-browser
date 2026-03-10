@@ -9,7 +9,7 @@ export async function runClickCommand(context: CommandContext, argv: string[]): 
   const sessionId = getFlagString(parsed, "session");
 
   if (!target) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent click <target> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser click <target> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);

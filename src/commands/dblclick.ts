@@ -9,7 +9,7 @@ export async function runDoubleClickCommand(context: CommandContext, argv: strin
   const sessionId = getFlagString(parsed, "session");
 
   if (!target) {
-    throw new AppError("BAD_REQUEST", "Usage: gologin-agent dblclick <target> [--session <sessionId>]", 400);
+    throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser dblclick <target> [--session <sessionId>]", 400);
   }
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);
