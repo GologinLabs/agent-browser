@@ -40,4 +40,4 @@ Suggested flow:
 
 - The published npm package name is `gologin-agent-browser-cli`.
 - The installed command is `gologin-agent-browser`.
-- GitHub installs work through `npm install -g github:GologinLabs/agent-browser`.
+- Recommended install is `npm install -g gologin-agent-browser-cli`.

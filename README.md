@@ -56,12 +56,6 @@ Install from npm:
 npm install -g gologin-agent-browser-cli
 ```
 
-Install from GitHub:
-
-```bash
-npm install -g github:GologinLabs/agent-browser
-```
-
 Run it directly:
 
 ```bash
@@ -82,8 +76,6 @@ cd agent-browser
 npm install
 npm run build
 ```
-
-GitHub installs build from source through the package `prepare` script, so `dist/` does not need to be committed for users to install the CLI from the repository.
 
 ## Get a Gologin Token
 
