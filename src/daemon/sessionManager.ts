@@ -6,10 +6,15 @@ import { generateSessionId, isRefTarget } from "../lib/utils";
 import type {
   ActionResponse,
   AgentConfig,
+  BrowserCookie,
   CheckResponse,
   ClickResponse,
   CloseSessionResponse,
+  CookiesClearResponse,
+  CookiesImportResponse,
+  CookiesResponse,
   DoubleClickResponse,
+  EvalResponse,
   FillResponse,
   FindRequest,
   FindResponse,
@@ -30,6 +35,15 @@ import type {
   SessionSummary,
   SessionsResponse,
   SnapshotResponse,
+  StorageClearResponse,
+  StorageExportResponse,
+  StorageImportResponse,
+  StorageScope,
+  StorageState,
+  TabCloseResponse,
+  TabFocusResponse,
+  TabOpenResponse,
+  TabsResponse,
   TypeResponse,
   UncheckResponse,
   UploadResponse,
@@ -41,19 +55,31 @@ import {
   annotatePageWithRefs,
   captureScreenshot,
   clearPageAnnotations,
+  clearCookies,
+  clearStorageState,
   closeSessionHandles,
   connectToBrowser,
   createManagedProfile,
   deleteProfile,
+  evaluateExpression,
+  exportStorageState,
+  focusTab,
   getCloudProfileProxy,
+  importCookies,
+  importStorageState,
+  listTabs,
   navigatePage,
+  navigateHistory,
+  openTab,
   performLocatorAction,
   pressKey,
   readLocatorValue,
+  readCookies,
   resolveDescriptorLocator,
   resolveSelectorLocator,
   resolveSemanticLocator,
   savePdf,
+  closeTab,
   scrollElement,
   scrollLocatorIntoView,
   scrollPage,
@@ -174,6 +200,18 @@ export class SessionManager {
     session.staleSnapshot = staleSnapshot;
   }
 
+  private resetSnapshotState(session: SessionRecord, staleSnapshot = false): void {
+    session.hasSnapshot = false;
+    session.staleSnapshot = staleSnapshot;
+    this.refStore.clear(session.sessionId);
+  }
+
+  private activatePage(session: SessionRecord, page: SessionRecord["page"], staleSnapshot = false): void {
+    session.page = page;
+    this.resetSnapshotState(session, staleSnapshot);
+    this.touchSession(session);
+  }
+
   private validateIdleTimeout(idleTimeoutMs: number | undefined): void {
     if (idleTimeoutMs === undefined) {
       return;
@@ -245,11 +283,8 @@ export class SessionManager {
       }
 
       existing.currentUrl = await navigatePage(existing.page, request.url, this.config.navigationTimeoutMs);
-      existing.hasSnapshot = false;
-      existing.staleSnapshot = true;
-      existing.lastActivityAt = this.nowIso();
-      this.refStore.clear(existing.sessionId);
-      this.activeSessionId = existing.sessionId;
+      this.resetSnapshotState(existing, true);
+      this.touchSession(existing);
 
       return {
         sessionId: existing.sessionId,
@@ -334,6 +369,56 @@ export class SessionManager {
       sessionId: session.sessionId,
       url: session.currentUrl,
       items: snapshot.items
+    };
+  }
+
+  async tabs(sessionId?: string): Promise<TabsResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    this.touchSession(session);
+
+    return {
+      sessionId: session.sessionId,
+      tabs: await listTabs(session)
+    };
+  }
+
+  async tabOpen(sessionId: string | undefined, url?: string): Promise<TabOpenResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const opened = await openTab(session, url, this.config.navigationTimeoutMs);
+    this.activatePage(session, opened.page);
+
+    return {
+      sessionId: session.sessionId,
+      tabIndex: opened.tabIndex,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot
+    };
+  }
+
+  async tabFocus(sessionId: string | undefined, index: number): Promise<TabFocusResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const focused = await focusTab(session, index);
+    this.activatePage(session, focused.page);
+
+    return {
+      sessionId: session.sessionId,
+      tabIndex: focused.tabIndex,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot
+    };
+  }
+
+  async tabClose(sessionId: string | undefined, index?: number): Promise<TabCloseResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const closed = await closeTab(session, index);
+    this.activatePage(session, closed.page);
+
+    return {
+      sessionId: session.sessionId,
+      closedTabIndex: closed.closedTabIndex,
+      activeTabIndex: closed.activeTabIndex,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot
     };
   }
 
@@ -550,6 +635,142 @@ export class SessionManager {
     return {
       sessionId: session.sessionId,
       url: session.currentUrl,
+      value
+    };
+  }
+
+  async back(sessionId?: string): Promise<ActionResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    session.currentUrl = await navigateHistory(session.page, "back", this.config.navigationTimeoutMs);
+    this.resetSnapshotState(session, true);
+    this.touchSession(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: true
+    };
+  }
+
+  async forward(sessionId?: string): Promise<ActionResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    session.currentUrl = await navigateHistory(session.page, "forward", this.config.navigationTimeoutMs);
+    this.resetSnapshotState(session, true);
+    this.touchSession(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: true
+    };
+  }
+
+  async reload(sessionId?: string): Promise<ActionResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    session.currentUrl = await navigateHistory(session.page, "reload", this.config.navigationTimeoutMs);
+    this.resetSnapshotState(session, true);
+    this.touchSession(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: true
+    };
+  }
+
+  async cookies(sessionId?: string): Promise<CookiesResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const cookies = await readCookies(session);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      cookies
+    };
+  }
+
+  async cookiesImport(sessionId: string | undefined, cookies: BrowserCookie[]): Promise<CookiesImportResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const imported = await importCookies(session, cookies);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot,
+      imported
+    };
+  }
+
+  async cookiesClear(sessionId?: string): Promise<CookiesClearResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const cleared = await clearCookies(session);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot,
+      cleared
+    };
+  }
+
+  async storageExport(sessionId: string | undefined, scope?: StorageScope): Promise<StorageExportResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const state = await exportStorageState(session.page, scope);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      state
+    };
+  }
+
+  async storageImport(
+    sessionId: string | undefined,
+    state: StorageState,
+    scope?: StorageScope,
+    clear = false
+  ): Promise<StorageImportResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const imported = await importStorageState(session.page, state, scope, clear);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot,
+      origin: imported.origin,
+      localKeys: imported.localKeys,
+      sessionKeys: imported.sessionKeys
+    };
+  }
+
+  async storageClear(sessionId: string | undefined, scope?: StorageScope): Promise<StorageClearResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const cleared = await clearStorageState(session.page, scope);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot,
+      origin: cleared.origin,
+      scope: cleared.scope
+    };
+  }
+
+  async eval(sessionId: string | undefined, expression: string): Promise<EvalResponse> {
+    const session = await this.getSessionOrThrow(sessionId);
+    const value = await evaluateExpression(session.page, expression);
+    this.markSessionState(session);
+
+    return {
+      sessionId: session.sessionId,
+      url: session.currentUrl,
+      staleSnapshot: session.staleSnapshot,
       value
     };
   }

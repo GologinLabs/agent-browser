@@ -6,7 +6,9 @@ import { AppError, serializeError } from "../lib/errors";
 import type {
   CheckRequest,
   ClickRequest,
+  CookiesImportRequest,
   DoubleClickRequest,
+  EvalRequest,
   FillRequest,
   FindRequest,
   FocusRequest,
@@ -16,11 +18,16 @@ import type {
   OpenSessionRequest,
   PdfRequest,
   PressRequest,
+  StorageClearRequest,
+  StorageImportRequest,
   ScrollIntoViewRequest,
   ScrollRequest,
   SelectRequest,
   ScreenshotRequest,
   SnapshotResponse,
+  TabCloseRequest,
+  TabFocusRequest,
+  TabOpenRequest,
   TypeRequest,
   UncheckRequest,
   UploadRequest,
@@ -78,6 +85,33 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
     if (method === "POST" && pathname === "/sessions/open") {
       const body = (await readJsonBody(request)) as OpenSessionRequest;
       writeJsonResponse(response, 200, await sessionManager.open(body));
+      return;
+    }
+
+    const tabsSessionId = matchSessionRoute(pathname, "tabs");
+    if (method === "GET" && tabsSessionId) {
+      writeJsonResponse(response, 200, await sessionManager.tabs(tabsSessionId));
+      return;
+    }
+
+    const tabOpenSessionId = matchSessionRoute(pathname, "tabopen");
+    if (method === "POST" && tabOpenSessionId) {
+      const body = (await readJsonBody(request)) as TabOpenRequest | undefined;
+      writeJsonResponse(response, 200, await sessionManager.tabOpen(tabOpenSessionId, body?.url));
+      return;
+    }
+
+    const tabFocusSessionId = matchSessionRoute(pathname, "tabfocus");
+    if (method === "POST" && tabFocusSessionId) {
+      const body = (await readJsonBody(request)) as TabFocusRequest;
+      writeJsonResponse(response, 200, await sessionManager.tabFocus(tabFocusSessionId, body.index));
+      return;
+    }
+
+    const tabCloseSessionId = matchSessionRoute(pathname, "tabclose");
+    if (method === "POST" && tabCloseSessionId) {
+      const body = (await readJsonBody(request)) as TabCloseRequest | undefined;
+      writeJsonResponse(response, 200, await sessionManager.tabClose(tabCloseSessionId, body?.index));
       return;
     }
 
@@ -184,6 +218,75 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
     if (method === "POST" && getSessionId) {
       const body = (await readJsonBody(request)) as GetRequest;
       writeJsonResponse(response, 200, await sessionManager.get(getSessionId, body.kind, body.target));
+      return;
+    }
+
+    const backSessionId = matchSessionRoute(pathname, "back");
+    if (method === "POST" && backSessionId) {
+      writeJsonResponse(response, 200, await sessionManager.back(backSessionId));
+      return;
+    }
+
+    const forwardSessionId = matchSessionRoute(pathname, "forward");
+    if (method === "POST" && forwardSessionId) {
+      writeJsonResponse(response, 200, await sessionManager.forward(forwardSessionId));
+      return;
+    }
+
+    const reloadSessionId = matchSessionRoute(pathname, "reload");
+    if (method === "POST" && reloadSessionId) {
+      writeJsonResponse(response, 200, await sessionManager.reload(reloadSessionId));
+      return;
+    }
+
+    const cookiesSessionId = matchSessionRoute(pathname, "cookies");
+    if (method === "GET" && cookiesSessionId) {
+      writeJsonResponse(response, 200, await sessionManager.cookies(cookiesSessionId));
+      return;
+    }
+
+    const cookiesImportSessionId = matchSessionRoute(pathname, "cookies-import");
+    if (method === "POST" && cookiesImportSessionId) {
+      const body = (await readJsonBody(request)) as CookiesImportRequest;
+      writeJsonResponse(response, 200, await sessionManager.cookiesImport(cookiesImportSessionId, body.cookies));
+      return;
+    }
+
+    const cookiesClearSessionId = matchSessionRoute(pathname, "cookies-clear");
+    if (method === "POST" && cookiesClearSessionId) {
+      writeJsonResponse(response, 200, await sessionManager.cookiesClear(cookiesClearSessionId));
+      return;
+    }
+
+    const storageExportSessionId = matchSessionRoute(pathname, "storage-export");
+    if (method === "POST" && storageExportSessionId) {
+      const body = (await readJsonBody(request)) as { scope?: StorageClearRequest["scope"] } | undefined;
+      writeJsonResponse(response, 200, await sessionManager.storageExport(storageExportSessionId, body?.scope));
+      return;
+    }
+
+    const storageImportSessionId = matchSessionRoute(pathname, "storage-import");
+    if (method === "POST" && storageImportSessionId) {
+      const body = (await readJsonBody(request)) as StorageImportRequest;
+      writeJsonResponse(
+        response,
+        200,
+        await sessionManager.storageImport(storageImportSessionId, body.state, body.scope, body.clear === true)
+      );
+      return;
+    }
+
+    const storageClearSessionId = matchSessionRoute(pathname, "storage-clear");
+    if (method === "POST" && storageClearSessionId) {
+      const body = (await readJsonBody(request)) as StorageClearRequest | undefined;
+      writeJsonResponse(response, 200, await sessionManager.storageClear(storageClearSessionId, body?.scope));
+      return;
+    }
+
+    const evalSessionId = matchSessionRoute(pathname, "eval");
+    if (method === "POST" && evalSessionId) {
+      const body = (await readJsonBody(request)) as EvalRequest;
+      writeJsonResponse(response, 200, await sessionManager.eval(evalSessionId, body.expression));
       return;
     }
 

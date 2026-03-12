@@ -18,8 +18,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "dev:cli": "tsx src/cli.ts",
     "dev:daemon": "tsx src/daemon/server.ts",
+    "prepare": "npm run build",
     "test": "tsx --test tests/**/*.test.ts",
-    "prepublishOnly": "npm run build && npm test"
+    "release:check": "npm run typecheck && npm test && npm run build && npm pack --dry-run",
+    "prepublishOnly": "npm run release:check"
   },
   "repository": {
     "type": "git",

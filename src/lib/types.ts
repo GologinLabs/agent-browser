@@ -210,6 +210,35 @@ export interface ScreenshotResponse {
   pressedEscape?: boolean;
 }
 
+export interface BrowserCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires: number;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite?: string;
+}
+
+export interface CookiesResponse {
+  sessionId: string;
+  url: string;
+  cookies: BrowserCookie[];
+}
+
+export interface CookiesImportRequest {
+  cookies: BrowserCookie[];
+}
+
+export interface CookiesImportResponse extends ActionResponse {
+  imported: number;
+}
+
+export interface CookiesClearResponse extends ActionResponse {
+  cleared: number;
+}
+
 export interface CloseSessionResponse {
   sessionId: string;
   closed: true;
@@ -218,6 +247,58 @@ export interface CloseSessionResponse {
 export interface SessionsResponse {
   activeSessionId?: string;
   sessions: SessionSummary[];
+}
+
+export interface TabSummary {
+  index: number;
+  url: string;
+  title?: string;
+  active: boolean;
+}
+
+export interface TabsResponse {
+  sessionId: string;
+  tabs: TabSummary[];
+}
+
+export interface TabOpenRequest {
+  url?: string;
+}
+
+export interface TabOpenResponse extends ActionResponse {
+  tabIndex: number;
+}
+
+export interface TabFocusRequest {
+  index: number;
+}
+
+export interface TabFocusResponse extends ActionResponse {
+  tabIndex: number;
+}
+
+export interface TabCloseRequest {
+  index?: number;
+}
+
+export interface TabCloseResponse extends ActionResponse {
+  closedTabIndex: number;
+  activeTabIndex: number;
+}
+
+export interface DoctorTransportStatus {
+  label: string;
+  reachable: boolean;
+}
+
+export interface DoctorResponse {
+  ok: boolean;
+  tokenConfigured: boolean;
+  defaultProfileId?: string;
+  connectBase: string;
+  daemonLogPath: string;
+  configPath: string;
+  transports: DoctorTransportStatus[];
 }
 
 export type WaitLoadState = "load" | "domcontentloaded" | "networkidle";
@@ -287,6 +368,53 @@ export interface GetResponse {
   value: string;
 }
 
+export type StorageScope = "local" | "session" | "both";
+
+export interface StorageState {
+  origin: string;
+  localStorage: Record<string, string>;
+  sessionStorage: Record<string, string>;
+}
+
+export interface StorageExportRequest {
+  scope?: StorageScope;
+}
+
+export interface StorageExportResponse {
+  sessionId: string;
+  url: string;
+  state: StorageState;
+}
+
+export interface StorageImportRequest {
+  state: StorageState;
+  scope?: StorageScope;
+  clear?: boolean;
+}
+
+export interface StorageImportResponse extends ActionResponse {
+  origin: string;
+  localKeys: number;
+  sessionKeys: number;
+}
+
+export interface StorageClearRequest {
+  scope?: StorageScope;
+}
+
+export interface StorageClearResponse extends ActionResponse {
+  origin: string;
+  scope: StorageScope;
+}
+
+export interface EvalRequest {
+  expression: string;
+}
+
+export interface EvalResponse extends ActionResponse {
+  value: unknown;
+}
+
 export type SemanticLocatorStrategy = "role" | "text" | "label" | "placeholder" | "first" | "last" | "nth";
 
 export interface SemanticLocatorQuery {
@@ -353,6 +481,7 @@ export interface DaemonClient {
 }
 
 export interface CommandContext {
+  config: AgentConfig;
   client: DaemonClient;
   stdout: NodeJS.WriteStream;
   stderr: NodeJS.WriteStream;

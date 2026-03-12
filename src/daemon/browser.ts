@@ -8,6 +8,9 @@ import { AppError } from "../lib/errors";
 import type {
   ActionResponse,
   AgentConfig,
+  BrowserCookie,
+  CookiesResponse,
+  EvalResponse,
   GetKind,
   ProxyConfig,
   ProxySummary,
@@ -16,6 +19,9 @@ import type {
   SemanticFindAction,
   SemanticLocatorQuery,
   SessionRecord,
+  StorageScope,
+  StorageState,
+  TabSummary,
   WaitLoadState
 } from "../lib/types";
 
@@ -618,6 +624,316 @@ export async function captureScreenshot(page: Page, targetPath: string, timeoutM
     fullPage: true,
     timeout: timeoutMs
   });
+}
+
+function resolvePageOrigin(page: Page): string {
+  const currentUrl = page.url();
+  try {
+    const origin = new URL(currentUrl).origin;
+    if (!origin || origin === "null") {
+      throw new Error("non-origin URL");
+    }
+
+    return origin;
+  } catch {
+    throw new AppError(
+      "BAD_REQUEST",
+      `Current tab URL ${currentUrl || "about:blank"} does not have a usable origin for storage operations`,
+      400
+    );
+  }
+}
+
+function normalizeStorageScope(scope?: StorageScope): StorageScope {
+  return scope ?? "both";
+}
+
+function hasLocalScope(scope: StorageScope): boolean {
+  return scope === "local" || scope === "both";
+}
+
+function hasSessionScope(scope: StorageScope): boolean {
+  return scope === "session" || scope === "both";
+}
+
+export async function listTabs(session: SessionRecord): Promise<TabSummary[]> {
+  const pages = session.context.pages();
+
+  return Promise.all(
+    pages.map(async (page, index) => ({
+      index: index + 1,
+      url: page.url(),
+      title: await page.title().catch(() => undefined),
+      active: page === session.page
+    }))
+  );
+}
+
+function requireTabIndex(session: SessionRecord, index: number): Page {
+  if (!Number.isInteger(index) || index <= 0) {
+    throw new AppError("BAD_REQUEST", "tab index must be a positive integer", 400);
+  }
+
+  const page = session.context.pages()[index - 1];
+  if (!page) {
+    throw new AppError("BAD_REQUEST", `tab ${index} does not exist`, 404, { tabIndex: index });
+  }
+
+  return page;
+}
+
+export async function openTab(session: SessionRecord, url: string | undefined, timeoutMs: number): Promise<{ page: Page; tabIndex: number }> {
+  const page = await session.context.newPage();
+  if (url) {
+    await navigatePage(page, url, timeoutMs);
+  }
+
+  await page.bringToFront().catch(() => undefined);
+  const tabIndex = session.context.pages().indexOf(page) + 1;
+
+  return {
+    page,
+    tabIndex
+  };
+}
+
+export async function focusTab(session: SessionRecord, index: number): Promise<{ page: Page; tabIndex: number }> {
+  const page = requireTabIndex(session, index);
+  await page.bringToFront().catch(() => undefined);
+
+  return {
+    page,
+    tabIndex: index
+  };
+}
+
+export async function closeTab(
+  session: SessionRecord,
+  index?: number
+): Promise<{ page: Page; closedTabIndex: number; activeTabIndex: number }> {
+  const pagesBefore = session.context.pages();
+  const currentIndex = pagesBefore.indexOf(session.page) + 1;
+  const resolvedIndex = index ?? currentIndex;
+  const target = requireTabIndex(session, resolvedIndex);
+
+  if (pagesBefore.length === 1) {
+    const replacement = await session.context.newPage();
+    await replacement.goto("about:blank").catch(() => undefined);
+    await target.close({ runBeforeUnload: false });
+    await replacement.bringToFront().catch(() => undefined);
+    return {
+      page: replacement,
+      closedTabIndex: resolvedIndex,
+      activeTabIndex: 1
+    };
+  }
+
+  await target.close({ runBeforeUnload: false });
+  const pagesAfter = session.context.pages();
+  const nextIndex = Math.min(resolvedIndex, pagesAfter.length);
+  const page = pagesAfter[nextIndex - 1];
+  if (!page) {
+    throw new AppError("INTERNAL_ERROR", "No tab remained after close", 500);
+  }
+
+  await page.bringToFront().catch(() => undefined);
+  return {
+    page,
+    closedTabIndex: resolvedIndex,
+    activeTabIndex: nextIndex
+  };
+}
+
+export async function navigateHistory(
+  page: Page,
+  direction: "back" | "forward" | "reload",
+  timeoutMs: number
+): Promise<string> {
+  try {
+    if (direction === "back") {
+      await page.goBack({ waitUntil: "domcontentloaded", timeout: timeoutMs }).catch(() => null);
+    } else if (direction === "forward") {
+      await page.goForward({ waitUntil: "domcontentloaded", timeout: timeoutMs }).catch(() => null);
+    } else {
+      await page.reload({ waitUntil: "domcontentloaded", timeout: timeoutMs });
+    }
+
+    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
+    return page.url();
+  } catch (error) {
+    throw new AppError(
+      "NAVIGATION_TIMEOUT",
+      error instanceof Error ? error.message : `Failed to navigate ${direction}`,
+      504,
+      { direction }
+    );
+  }
+}
+
+export async function readCookies(session: SessionRecord): Promise<CookiesResponse["cookies"]> {
+  const cookies = await session.context.cookies();
+
+  return cookies
+    .map((cookie) => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path,
+      expires: cookie.expires,
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+      sameSite: cookie.sameSite
+    }))
+    .sort((left, right) =>
+      `${left.domain}|${left.path}|${left.name}`.localeCompare(`${right.domain}|${right.path}|${right.name}`)
+    );
+}
+
+export async function importCookies(session: SessionRecord, cookies: BrowserCookie[]): Promise<number> {
+  await session.context.addCookies(cookies as never);
+  return cookies.length;
+}
+
+export async function clearCookies(session: SessionRecord): Promise<number> {
+  const existing = await session.context.cookies();
+  await session.context.clearCookies();
+  return existing.length;
+}
+
+export async function exportStorageState(page: Page, scope?: StorageScope): Promise<StorageState> {
+  const resolvedScope = normalizeStorageScope(scope);
+  const origin = resolvePageOrigin(page);
+
+  const state = await page.evaluate((requestedScope) => {
+    const localEntries: Array<[string, string]> = [];
+    const sessionEntries: Array<[string, string]> = [];
+
+    if (requestedScope === "local" || requestedScope === "both") {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key !== null) {
+          localEntries.push([key, localStorage.getItem(key) ?? ""]);
+        }
+      }
+      localEntries.sort(([left], [right]) => left.localeCompare(right));
+    }
+
+    if (requestedScope === "session" || requestedScope === "both") {
+      for (let index = 0; index < sessionStorage.length; index += 1) {
+        const key = sessionStorage.key(index);
+        if (key !== null) {
+          sessionEntries.push([key, sessionStorage.getItem(key) ?? ""]);
+        }
+      }
+      sessionEntries.sort(([left], [right]) => left.localeCompare(right));
+    }
+
+    return {
+      localStorage: Object.fromEntries(localEntries),
+      sessionStorage: Object.fromEntries(sessionEntries)
+    };
+  }, resolvedScope);
+
+  return {
+    origin,
+    localStorage: state.localStorage,
+    sessionStorage: state.sessionStorage
+  };
+}
+
+export async function importStorageState(
+  page: Page,
+  state: StorageState,
+  scope?: StorageScope,
+  clear = false
+): Promise<{ origin: string; localKeys: number; sessionKeys: number }> {
+  const resolvedScope = normalizeStorageScope(scope);
+  const origin = resolvePageOrigin(page);
+  if (origin !== state.origin) {
+    throw new AppError(
+      "BAD_REQUEST",
+      `Storage state origin ${state.origin} does not match current tab origin ${origin}`,
+      400,
+      {
+        expectedOrigin: origin,
+        actualOrigin: state.origin
+      }
+    );
+  }
+
+  const localStorageState = hasLocalScope(resolvedScope) ? state.localStorage : {};
+  const sessionStorageState = hasSessionScope(resolvedScope) ? state.sessionStorage : {};
+
+  await page.evaluate(
+    ({ incoming, requestedScope, shouldClear }) => {
+      if (shouldClear) {
+        if (requestedScope === "local" || requestedScope === "both") {
+          localStorage.clear();
+        }
+        if (requestedScope === "session" || requestedScope === "both") {
+          sessionStorage.clear();
+        }
+      }
+
+      if (requestedScope === "local" || requestedScope === "both") {
+        for (const [key, value] of Object.entries(incoming.localStorage)) {
+          localStorage.setItem(key, value);
+        }
+      }
+
+      if (requestedScope === "session" || requestedScope === "both") {
+        for (const [key, value] of Object.entries(incoming.sessionStorage)) {
+          sessionStorage.setItem(key, value);
+        }
+      }
+    },
+    {
+      incoming: {
+        localStorage: localStorageState,
+        sessionStorage: sessionStorageState
+      },
+      requestedScope: resolvedScope,
+      shouldClear: clear
+    }
+  );
+
+  return {
+    origin,
+    localKeys: Object.keys(localStorageState).length,
+    sessionKeys: Object.keys(sessionStorageState).length
+  };
+}
+
+export async function clearStorageState(page: Page, scope?: StorageScope): Promise<{ origin: string; scope: StorageScope }> {
+  const resolvedScope = normalizeStorageScope(scope);
+  const origin = resolvePageOrigin(page);
+
+  await page.evaluate((requestedScope) => {
+    if (requestedScope === "local" || requestedScope === "both") {
+      localStorage.clear();
+    }
+    if (requestedScope === "session" || requestedScope === "both") {
+      sessionStorage.clear();
+    }
+  }, resolvedScope);
+
+  return {
+    origin,
+    scope: resolvedScope
+  };
+}
+
+export async function evaluateExpression(page: Page, expression: string): Promise<EvalResponse["value"]> {
+  try {
+    return await page.evaluate((userExpression) => {
+      const fn = new Function(`return (${userExpression});`);
+      return fn();
+    }, expression);
+  } catch (error) {
+    throw new AppError("BAD_REQUEST", error instanceof Error ? error.message : String(error), 400, {
+      expression
+    });
+  }
 }
 
 export async function annotatePageWithRefs(

@@ -1,45 +1,62 @@
 #!/usr/bin/env node
 
-import http from "node:http";
-import { spawn } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-
+import { runBackCommand } from "./commands/back";
 import { runCheckCommand } from "./commands/check";
 import { runClickCommand } from "./commands/click";
 import { runCloseCommand } from "./commands/close";
+import { runCookiesCommand } from "./commands/cookies";
+import { runCookiesClearCommand } from "./commands/cookiesClear";
+import { runCookiesImportCommand } from "./commands/cookiesImport";
 import { runCurrentCommand } from "./commands/current";
+import { runDoctorCommand } from "./commands/doctor";
 import { runDoubleClickCommand } from "./commands/dblclick";
+import { runEvalCommand } from "./commands/eval";
 import { runFillCommand } from "./commands/fill";
 import { runFindCommand } from "./commands/find";
 import { runFocusCommand } from "./commands/focus";
+import { runForwardCommand } from "./commands/forward";
 import { runGetCommand } from "./commands/get";
 import { runHoverCommand } from "./commands/hover";
 import { runOpenCommand } from "./commands/open";
 import { runPdfCommand } from "./commands/pdf";
 import { runPressCommand } from "./commands/press";
+import { runReloadCommand } from "./commands/reload";
 import { runScreenshotCommand } from "./commands/screenshot";
 import { runScrollCommand } from "./commands/scroll";
 import { runScrollIntoViewCommand } from "./commands/scrollIntoView";
+import { runStorageClearCommand } from "./commands/storageClear";
+import { runStorageExportCommand } from "./commands/storageExport";
+import { runStorageImportCommand } from "./commands/storageImport";
 import { runSessionsCommand } from "./commands/sessions";
 import { runSnapshotCommand } from "./commands/snapshot";
 import { runSelectCommand } from "./commands/select";
+import { runTabCloseCommand } from "./commands/tabClose";
+import { runTabFocusCommand } from "./commands/tabFocus";
+import { runTabOpenCommand } from "./commands/tabOpen";
+import { runTabsCommand } from "./commands/tabs";
 import { runTypeCommand } from "./commands/type";
 import { runUncheckCommand } from "./commands/uncheck";
 import { runUploadCommand } from "./commands/upload";
 import { runWaitCommand } from "./commands/wait";
+import { createHealthyDaemonClient } from "./lib/daemon";
 import { loadConfig } from "./lib/config";
-import { AppError, formatErrorLine, fromDaemonError } from "./lib/errors";
-import type {
-  CommandContext,
-  DaemonClient,
-  HealthResponse,
-  ResolvedTransport
-} from "./lib/types";
-import { isDaemonErrorResponse } from "./lib/utils";
+import { AppError, formatErrorLine } from "./lib/errors";
+import type { CommandContext } from "./lib/types";
 
 type CommandName =
   | "open"
+  | "doctor"
+  | "tabs"
+  | "tabopen"
+  | "tabfocus"
+  | "tabclose"
+  | "cookies"
+  | "cookies-import"
+  | "cookies-clear"
+  | "storage-export"
+  | "storage-import"
+  | "storage-clear"
+  | "eval"
   | "snapshot"
   | "click"
   | "dblclick"
@@ -55,6 +72,9 @@ type CommandName =
   | "scrollintoview"
   | "wait"
   | "get"
+  | "back"
+  | "forward"
+  | "reload"
   | "find"
   | "upload"
   | "pdf"
@@ -62,6 +82,47 @@ type CommandName =
   | "close"
   | "sessions"
   | "current";
+
+const commandUsage: Record<CommandName, string> = {
+  open: "open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5>] (aliases: goto, navigate)",
+  doctor: "doctor [--json]",
+  tabs: "tabs [--session <sessionId>]",
+  tabopen: "tabopen [url] [--session <sessionId>] (alias: tabnew)",
+  tabfocus: "tabfocus <index> [--session <sessionId>] (alias: tabswitch)",
+  tabclose: "tabclose [index] [--session <sessionId>]",
+  cookies: "cookies [--session <sessionId>] [--output <path>] [--json]",
+  "cookies-import": "cookies-import <cookies.json> [--session <sessionId>]",
+  "cookies-clear": "cookies-clear [--session <sessionId>]",
+  "storage-export": "storage-export [path] [--scope <local|session|both>] [--session <sessionId>] [--json]",
+  "storage-import": "storage-import <storage.json> [--scope <local|session|both>] [--clear] [--session <sessionId>]",
+  "storage-clear": "storage-clear [--scope <local|session|both>] [--session <sessionId>]",
+  eval: "eval <expression> [--json] [--session <sessionId>] (alias: js)",
+  snapshot: "snapshot [--session <sessionId>] [--interactive|-i]",
+  click: "click <target> [--session <sessionId>]",
+  dblclick: "dblclick <target> [--session <sessionId>]",
+  focus: "focus <target> [--session <sessionId>]",
+  type: "type <target> <text> [--session <sessionId>]",
+  fill: "fill <target> <text> [--session <sessionId>]",
+  hover: "hover <target> [--session <sessionId>]",
+  select: "select <target> <value> [--session <sessionId>]",
+  check: "check <target> [--session <sessionId>]",
+  uncheck: "uncheck <target> [--session <sessionId>]",
+  press: "press <key> [target] [--session <sessionId>] (alias: key)",
+  scroll: "scroll <up|down|left|right> [pixels] [--target <target>] [--session <sessionId>]",
+  scrollintoview: "scrollintoview <target> [--session <sessionId>] (alias: scrollinto)",
+  wait: "wait <target|ms> [--text <text>] [--url <pattern>] [--load <state>] [--session <sessionId>]",
+  get: "get <text|value|html|title|url> [target] [--session <sessionId>]",
+  back: "back [--session <sessionId>]",
+  forward: "forward [--session <sessionId>]",
+  reload: "reload [--session <sessionId>]",
+  find: "find <role|text|label|placeholder|first|last|nth> ... [--exact]",
+  upload: "upload <target> <file...> [--session <sessionId>]",
+  pdf: "pdf <path> [--session <sessionId>]",
+  screenshot: "screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]",
+  close: "close [--session <sessionId>] (aliases: quit, exit)",
+  sessions: "sessions",
+  current: "current"
+};
 
 function printUsage(): void {
   process.stderr.write(
@@ -72,29 +133,7 @@ function printUsage(): void {
       "  gologin-agent-browser <command> [args] [options]",
       "",
       "Commands:",
-      "  open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5>] (aliases: goto, navigate)",
-      "  snapshot [--session <sessionId>] [--interactive|-i]",
-      "  click <target> [--session <sessionId>]",
-      "  dblclick <target> [--session <sessionId>]",
-      "  focus <target> [--session <sessionId>]",
-      "  type <target> <text> [--session <sessionId>]",
-      "  fill <target> <text> [--session <sessionId>]",
-      "  hover <target> [--session <sessionId>]",
-      "  select <target> <value> [--session <sessionId>]",
-      "  check <target> [--session <sessionId>]",
-      "  uncheck <target> [--session <sessionId>]",
-      "  press <key> [target] [--session <sessionId>] (alias: key)",
-      "  scroll <up|down|left|right> [pixels] [--target <target>] [--session <sessionId>]",
-      "  scrollintoview <target> [--session <sessionId>] (alias: scrollinto)",
-      "  wait <target|ms> [--text <text>] [--url <pattern>] [--load <state>] [--session <sessionId>]",
-      "  get <text|value|html|title|url> [target] [--session <sessionId>]",
-      "  find <role|text|label|placeholder|first|last|nth> ... [--exact]",
-      "  upload <target> <file...> [--session <sessionId>]",
-      "  pdf <path> [--session <sessionId>]",
-      "  screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]",
-      "  close [--session <sessionId>] (aliases: quit, exit)",
-      "  sessions",
-      "  current",
+      ...Object.values(commandUsage).map((usage) => `  ${usage}`),
       "",
       "Environment:",
       "  GOLOGIN_TOKEN",
@@ -105,176 +144,66 @@ function printUsage(): void {
   );
 }
 
-function projectRootFromCli(): string {
-  return path.resolve(__dirname, "..");
-}
-
-function buildDaemonSpawnCommand(projectRoot: string): { command: string; args: string[] } {
-  const distServerPath = path.join(projectRoot, "dist", "daemon", "server.js");
-  if (fs.existsSync(distServerPath)) {
-    return {
-      command: process.execPath,
-      args: [distServerPath]
-    };
-  }
-
-  const tsxCli = path.join(projectRoot, "node_modules", "tsx", "dist", "cli.mjs");
-  const srcServerPath = path.join(projectRoot, "src", "daemon", "server.ts");
-
-  if (fs.existsSync(tsxCli) && fs.existsSync(srcServerPath)) {
-    return {
-      command: process.execPath,
-      args: [tsxCli, srcServerPath]
-    };
-  }
-
-  throw new AppError(
-    "DAEMON_UNREACHABLE",
-    "Daemon entrypoint is missing. Run npm install and npm run build first.",
-    500
+function printCommandUsage(command: CommandName): void {
+  process.stderr.write(
+    [
+      "Usage:",
+      `  gologin-agent-browser ${commandUsage[command]}`,
+      "",
+      "Tip:",
+      "  Use --json when you want machine-readable output."
+    ].join("\n") + "\n"
   );
 }
 
-function requestOverHttp(
-  transport: ResolvedTransport,
-  method: string,
-  requestPath: string,
-  body?: unknown
-): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
-    const options: http.RequestOptions =
-      transport.kind === "socket"
-        ? {
-            socketPath: transport.socketPath,
-            path: requestPath,
-            method,
-            headers: payload
-              ? {
-                  "content-type": "application/json",
-                  "content-length": String(payload.length)
-                }
-              : undefined
-          }
-        : {
-            host: transport.host,
-            port: transport.port,
-            path: requestPath,
-            method,
-            headers: payload
-              ? {
-                  "content-type": "application/json",
-                  "content-length": String(payload.length)
-                }
-              : undefined
-          };
-
-    const request = http.request(options, (response) => {
-      const chunks: Buffer[] = [];
-      response.on("data", (chunk: Buffer) => chunks.push(chunk));
-      response.on("end", () => {
-        const raw = chunks.length > 0 ? Buffer.concat(chunks).toString("utf8") : "{}";
-        const parsed = raw.length > 0 ? (JSON.parse(raw) as unknown) : undefined;
-
-        if ((response.statusCode ?? 500) >= 400) {
-          if (isDaemonErrorResponse(parsed)) {
-            reject(fromDaemonError(parsed));
-            return;
-          }
-
-          reject(new AppError("INTERNAL_ERROR", `Daemon request failed with status ${response.statusCode}`, 500));
-          return;
-        }
-
-        resolve(parsed);
-      });
-    });
-
-    request.on("error", (error) => reject(error));
-
-    if (payload) {
-      request.write(payload);
-    }
-
-    request.end();
-  });
+function commandRequiresDaemon(command: CommandName): boolean {
+  return command !== "doctor";
 }
 
-async function probeTransport(transport: ResolvedTransport): Promise<boolean> {
-  try {
-    await requestOverHttp(transport, "GET", "/health");
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function waitForDaemon(transports: ResolvedTransport[], timeoutMs: number): Promise<ResolvedTransport | undefined> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    for (const transport of transports) {
-      if (await probeTransport(transport)) {
-        return transport;
-      }
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-
-  return undefined;
-}
-
-async function ensureDaemon(config: ReturnType<typeof loadConfig>): Promise<ResolvedTransport> {
-  const transports: ResolvedTransport[] = [];
-  if (process.platform !== "win32") {
-    transports.push({
-      kind: "socket",
-      socketPath: config.socketPath
-    });
-  }
-  transports.push({
-    kind: "http",
-    host: config.daemonHost,
-    port: config.daemonPort
-  });
-
-  for (const transport of transports) {
-    if (await probeTransport(transport)) {
-      return transport;
-    }
-  }
-
-  const projectRoot = projectRootFromCli();
-  const command = buildDaemonSpawnCommand(projectRoot);
-  const child = spawn(command.command, command.args, {
-    cwd: projectRoot,
-    detached: true,
-    stdio: "ignore",
-    env: process.env
-  });
-  child.unref();
-
-  const resolved = await waitForDaemon(transports, 5_000);
-  if (!resolved) {
-    throw new AppError("DAEMON_UNREACHABLE", "Local daemon did not start in time", 503);
-  }
-
-  return resolved;
-}
-
-function createDaemonClient(transport: ResolvedTransport): DaemonClient {
-  return {
-    transport,
-    async request<TResponse>(method: string, requestPath: string, body?: unknown): Promise<TResponse> {
-      return (await requestOverHttp(transport, method, requestPath, body)) as TResponse;
-    }
-  };
+export function isHelpRequest(argv: string[]): boolean {
+  return argv.includes("--help") || argv.includes("-h");
 }
 
 async function runCommand(command: CommandName, context: CommandContext, args: string[]): Promise<void> {
   switch (command) {
     case "open":
       await runOpenCommand(context, args);
+      return;
+    case "doctor":
+      await runDoctorCommand(context, args);
+      return;
+    case "tabs":
+      await runTabsCommand(context, args);
+      return;
+    case "tabopen":
+      await runTabOpenCommand(context, args);
+      return;
+    case "tabfocus":
+      await runTabFocusCommand(context, args);
+      return;
+    case "tabclose":
+      await runTabCloseCommand(context, args);
+      return;
+    case "cookies":
+      await runCookiesCommand(context, args);
+      return;
+    case "cookies-import":
+      await runCookiesImportCommand(context, args);
+      return;
+    case "cookies-clear":
+      await runCookiesClearCommand(context, args);
+      return;
+    case "storage-export":
+      await runStorageExportCommand(context, args);
+      return;
+    case "storage-import":
+      await runStorageImportCommand(context, args);
+      return;
+    case "storage-clear":
+      await runStorageClearCommand(context, args);
+      return;
+    case "eval":
+      await runEvalCommand(context, args);
       return;
     case "snapshot":
       await runSnapshotCommand(context, args);
@@ -321,6 +250,15 @@ async function runCommand(command: CommandName, context: CommandContext, args: s
     case "get":
       await runGetCommand(context, args);
       return;
+    case "back":
+      await runBackCommand(context, args);
+      return;
+    case "forward":
+      await runForwardCommand(context, args);
+      return;
+    case "reload":
+      await runReloadCommand(context, args);
+      return;
     case "find":
       await runFindCommand(context, args);
       return;
@@ -349,7 +287,9 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
   const aliases: Record<string, CommandName> = {
     goto: "open",
     navigate: "open",
-    dblclick: "dblclick",
+    tabnew: "tabopen",
+    tabswitch: "tabfocus",
+    js: "eval",
     key: "press",
     scrollinto: "scrollintoview",
     quit: "close",
@@ -362,6 +302,18 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
 
   const directCommands = new Set<CommandName>([
     "open",
+    "doctor",
+    "tabs",
+    "tabopen",
+    "tabfocus",
+    "tabclose",
+    "cookies",
+    "cookies-import",
+    "cookies-clear",
+    "storage-export",
+    "storage-import",
+    "storage-clear",
+    "eval",
     "snapshot",
     "click",
     "dblclick",
@@ -377,6 +329,9 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
     "scrollintoview",
     "wait",
     "get",
+    "back",
+    "forward",
+    "reload",
     "find",
     "upload",
     "pdf",
@@ -389,7 +344,7 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
   return directCommands.has(commandArg as CommandName) ? (commandArg as CommandName) : undefined;
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const commandArg = argv[0];
 
@@ -404,16 +359,27 @@ async function main(): Promise<void> {
     throw new AppError("BAD_REQUEST", `Unknown command: ${commandArg}`, 400);
   }
 
-  const config = loadConfig();
-  const transport = await ensureDaemon(config);
-  const client = createDaemonClient(transport);
-
-  const health = await client.request<HealthResponse>("GET", "/health");
-  if (!health.ok) {
-    throw new AppError("DAEMON_UNREACHABLE", "Daemon health probe failed", 503);
+  if (isHelpRequest(argv.slice(1))) {
+    printCommandUsage(command);
+    process.exit(0);
   }
 
+  const config = loadConfig();
+  const client = commandRequiresDaemon(command)
+    ? await createHealthyDaemonClient(config)
+    : {
+        transport: {
+          kind: "http" as const,
+          host: config.daemonHost,
+          port: config.daemonPort
+        },
+        async request<TResponse>(): Promise<TResponse> {
+          throw new AppError("DAEMON_UNREACHABLE", "This command should not call the daemon client", 500);
+        }
+      };
+
   const context: CommandContext = {
+    config,
     client,
     stdout: process.stdout,
     stderr: process.stderr,
@@ -423,7 +389,9 @@ async function main(): Promise<void> {
   await runCommand(command, context, argv.slice(1));
 }
 
-main().catch((error) => {
-  process.stderr.write(`${formatErrorLine(error)}\n`);
-  process.exit(error instanceof AppError ? 1 : 1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${formatErrorLine(error)}\n`);
+    process.exit(error instanceof AppError ? 1 : 1);
+  });
+}

@@ -56,6 +56,12 @@ Install from npm:
 npm install -g gologin-agent-browser-cli
 ```
 
+Install from GitHub:
+
+```bash
+npm install -g github:GologinLabs/agent-browser
+```
+
 Run it directly:
 
 ```bash
@@ -76,6 +82,8 @@ cd agent-browser
 npm install
 npm run build
 ```
+
+GitHub installs build from source through the package `prepare` script, so `dist/` does not need to be committed for users to install the CLI from the repository.
 
 ## Get a Gologin Token
 
@@ -173,6 +181,7 @@ gologin-agent-browser screenshot page.png --annotate --press-escape
 
 ## Commands
 
+- `doctor [--json]`
 - `open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>]`
 - `open <url> [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5> --proxy-user <user> --proxy-pass <pass>]`
 - `snapshot [--session <sessionId>] [--interactive]`
@@ -197,6 +206,24 @@ gologin-agent-browser screenshot page.png --annotate --press-escape
 - `close [--session <sessionId>]`
 - `sessions`
 - `current`
+
+## Help And Diagnostics
+
+Subcommand help now works without a daemon round-trip:
+
+```bash
+gologin-agent-browser open --help
+gologin-agent-browser screenshot --help
+```
+
+When bootstrap is flaky, inspect the local setup directly:
+
+```bash
+gologin-agent-browser doctor
+gologin-agent-browser doctor --json
+```
+
+`doctor` reports whether a token is configured, which connect base is configured, which local transports are reachable, and where the daemon log is written.
 
 ## Example Session Flow
 
