@@ -9,6 +9,8 @@ It is designed for agent loops that need to stay simple:
 - act on stable refs like `@e3`
 - keep working across multiple CLI calls through a local daemon
 - save artifacts such as screenshots and PDFs when needed
+- inspect daemon health with `doctor`
+- manage tabs, cookies, storage, and in-page eval without dropping to raw Playwright
 
 Unlike local-browser automation tools, it runs on top of a cloud browser stack built around Gologin profiles, proxies, fingerprinting, and anti-detect capabilities.
 
@@ -157,6 +159,10 @@ On dynamic pages, `find ...` is usually a better fallback than stale refs becaus
 ```bash
 gologin-agent-browser open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
 gologin-agent-browser open https://example.com --profile your-preconfigured-gologin-profile
+gologin-agent-browser tabs
+gologin-agent-browser tabopen https://www.iana.org
+gologin-agent-browser tabfocus 2
+gologin-agent-browser tabclose 2
 gologin-agent-browser click "a[href*='iana']"
 gologin-agent-browser type "textarea[name='message']" "hello world"
 gologin-agent-browser focus "input[name='email']"
@@ -168,6 +174,12 @@ gologin-agent-browser scrollintoview "#submit"
 gologin-agent-browser find label "Email" fill "test@example.com"
 gologin-agent-browser upload "input[type='file']" /absolute/path/to/avatar.png
 gologin-agent-browser wait --text "Welcome"
+gologin-agent-browser cookies --json
+gologin-agent-browser storage-export /tmp/storage.json
+gologin-agent-browser eval "document.title" --json
+gologin-agent-browser back
+gologin-agent-browser forward
+gologin-agent-browser reload
 gologin-agent-browser screenshot page.png --annotate --press-escape
 ```
 
@@ -176,6 +188,17 @@ gologin-agent-browser screenshot page.png --annotate --press-escape
 - `doctor [--json]`
 - `open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>]`
 - `open <url> [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5> --proxy-user <user> --proxy-pass <pass>]`
+- `tabs [--session <sessionId>]`
+- `tabopen [url] [--session <sessionId>]`
+- `tabfocus <index> [--session <sessionId>]`
+- `tabclose [index] [--session <sessionId>]`
+- `cookies [--session <sessionId>] [--output <path>] [--json]`
+- `cookies-import <cookies.json> [--session <sessionId>]`
+- `cookies-clear [--session <sessionId>]`
+- `storage-export [path] [--scope <local|session|both>] [--session <sessionId>] [--json]`
+- `storage-import <storage.json> [--scope <local|session|both>] [--clear] [--session <sessionId>]`
+- `storage-clear [--scope <local|session|both>] [--session <sessionId>]`
+- `eval <expression> [--json] [--session <sessionId>]`
 - `snapshot [--session <sessionId>] [--interactive]`
 - `click <target> [--session <sessionId>]`
 - `dblclick <target> [--session <sessionId>]`
@@ -191,6 +214,9 @@ gologin-agent-browser screenshot page.png --annotate --press-escape
 - `scrollintoview <target> [--session <sessionId>]`
 - `wait <target|ms> [--text <text>] [--url <pattern>] [--load <state>] [--session <sessionId>]`
 - `get <text|value|html|title|url> [target] [--session <sessionId>]`
+- `back [--session <sessionId>]`
+- `forward [--session <sessionId>]`
+- `reload [--session <sessionId>]`
 - `find <role|text|label|placeholder|first|last|nth> ...`
 - `upload <target> <file...> [--session <sessionId>]`
 - `pdf <path> [--session <sessionId>]`
@@ -255,6 +281,9 @@ When screenshots or PDFs are generated, `current` and `sessions` include the lat
 Supported aliases:
 
 - `goto`, `navigate` -> `open`
+- `tabnew` -> `tabopen`
+- `tabswitch` -> `tabfocus`
+- `js` -> `eval`
 - `key` -> `press`
 - `scrollinto` -> `scrollintoview`
 - `quit`, `exit` -> `close`
