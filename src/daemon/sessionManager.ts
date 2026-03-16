@@ -10,6 +10,7 @@ import type {
   CheckResponse,
   ClickResponse,
   CloseSessionResponse,
+  CloseAllSessionsResponse,
   CookiesClearResponse,
   CookiesImportResponse,
   CookiesResponse,
@@ -26,6 +27,7 @@ import type {
   OpenSessionResponse,
   PdfResponse,
   PressResponse,
+  PruneSessionsResponse,
   ScrollDirection,
   ScrollIntoViewResponse,
   ScrollResponse,
@@ -93,6 +95,8 @@ import { RefStore } from "./refStore";
 import { buildSnapshot } from "./snapshot";
 
 export class SessionManager {
+  private static readonly DEFAULT_PRUNE_IDLE_MS = 10 * 60 * 1000;
+  private static readonly CLOUD_SLOT_RELEASE_WAIT_MS = 3_000;
   private readonly sessions = new Map<string, SessionRecord>();
   private activeSessionId?: string;
   private readonly refStore = new RefStore();
@@ -122,6 +126,42 @@ export class SessionManager {
     }
 
     return Date.now() - lastActivityAt > session.idleTimeoutMs;
+  }
+
+  private sessionIdleMs(session: SessionRecord): number {
+    const lastActivityAt = Date.parse(session.lastActivityAt);
+    if (Number.isNaN(lastActivityAt)) {
+      return 0;
+    }
+
+    return Math.max(0, Date.now() - lastActivityAt);
+  }
+
+  private isCloudSlotLimitError(error: unknown): error is AppError {
+    return (
+      error instanceof AppError &&
+      error.code === "BROWSER_CONNECTION_FAILED" &&
+      /max parallel cloud launches limit/i.test(error.message)
+    );
+  }
+
+  private async pruneInactiveSessions(maxIdleMs = SessionManager.DEFAULT_PRUNE_IDLE_MS): Promise<string[]> {
+    const closedSessionIds: string[] = [];
+
+    for (const session of Array.from(this.sessions.values())) {
+      if (this.sessionIdleMs(session) < maxIdleMs) {
+        continue;
+      }
+
+      closedSessionIds.push(session.sessionId);
+      await this.destroySession(session);
+    }
+
+    return closedSessionIds;
+  }
+
+  private async waitForCloudSlotRelease(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, SessionManager.CLOUD_SLOT_RELEASE_WAIT_MS));
   }
 
   private async destroySession(session: SessionRecord): Promise<void> {
@@ -222,6 +262,40 @@ export class SessionManager {
     }
   }
 
+  private async createSessionRecord(
+    token: string,
+    sessionId: string,
+    profileId: string | undefined,
+    request: OpenSessionRequest,
+    createdAt: string,
+    resolvedProxy: SessionRecord["proxy"],
+    autoCreatedProfile: boolean
+  ): Promise<SessionRecord> {
+    const connection = await connectToBrowser(this.config, token, profileId);
+    const currentUrl = await navigatePage(connection.page, request.url, this.config.navigationTimeoutMs);
+    const lastActivityAt = this.nowIso();
+    if (!resolvedProxy && profileId) {
+      resolvedProxy = await getCloudProfileProxy(token, profileId).catch(() => undefined);
+    }
+
+    return {
+      sessionId,
+      profileId,
+      autoCreatedProfile,
+      connectUrl: connection.connectUrl,
+      browser: connection.browser,
+      context: connection.context,
+      page: connection.page,
+      currentUrl,
+      hasSnapshot: false,
+      staleSnapshot: false,
+      proxy: resolvedProxy,
+      createdAt,
+      lastActivityAt,
+      idleTimeoutMs: request.idleTimeoutMs
+    };
+  }
+
   private async resolveTargetLocator(session: SessionRecord, target: string) {
     if (isRefTarget(target)) {
       const descriptor = this.refStore.get(session.sessionId, target);
@@ -263,6 +337,7 @@ export class SessionManager {
   async open(request: OpenSessionRequest): Promise<OpenSessionResponse> {
     const token = this.requireToken();
     this.validateIdleTimeout(request.idleTimeoutMs);
+    await this.pruneInactiveSessions();
 
     if (request.profileId && request.proxy) {
       throw new AppError("BAD_REQUEST", "proxy flags cannot be combined with --profile", 400);
@@ -310,29 +385,57 @@ export class SessionManager {
     }
 
     try {
-      const connection = await connectToBrowser(this.config, token, profileId);
-      const currentUrl = await navigatePage(connection.page, request.url, this.config.navigationTimeoutMs);
-      const lastActivityAt = this.nowIso();
-      if (!resolvedProxy && profileId) {
-        resolvedProxy = await getCloudProfileProxy(token, profileId).catch(() => undefined);
-      }
+      let session: SessionRecord;
+      try {
+        session = await this.createSessionRecord(
+          token,
+          sessionId,
+          profileId,
+          request,
+          createdAt,
+          resolvedProxy,
+          autoCreatedProfile
+        );
+      } catch (error) {
+        if (!this.isCloudSlotLimitError(error)) {
+          throw error;
+        }
 
-      const session: SessionRecord = {
-        sessionId,
-        profileId,
-        autoCreatedProfile,
-        connectUrl: connection.connectUrl,
-        browser: connection.browser,
-        context: connection.context,
-        page: connection.page,
-        currentUrl,
-        hasSnapshot: false,
-        staleSnapshot: false,
-        proxy: resolvedProxy,
-        createdAt,
-        lastActivityAt,
-        idleTimeoutMs: request.idleTimeoutMs
-      };
+        if (this.sessions.size === 0) {
+          throw new AppError(
+            "BROWSER_CONNECTION_FAILED",
+            `${error.message}. No tracked local sessions were available to close. Wait for cloud slots to free up or close stale sessions from another daemon, then retry.`,
+            error.status,
+            error.details
+          );
+        }
+
+        const closedSessionIds = (await this.closeAll()).closedSessionIds;
+        await this.waitForCloudSlotRelease();
+
+        try {
+          session = await this.createSessionRecord(
+            token,
+            sessionId,
+            profileId,
+            request,
+            createdAt,
+            resolvedProxy,
+            autoCreatedProfile
+          );
+        } catch (retryError) {
+          if (retryError instanceof AppError && retryError.code === "BROWSER_CONNECTION_FAILED") {
+            throw new AppError(
+              retryError.code,
+              `${retryError.message}. Closed tracked sessions (${closedSessionIds.join(", ")}) and retried once, but the cloud slot was still unavailable.`,
+              retryError.status,
+              retryError.details
+            );
+          }
+
+          throw retryError;
+        }
+      }
 
       this.sessions.set(sessionId, session);
       this.activeSessionId = sessionId;
@@ -341,7 +444,7 @@ export class SessionManager {
       return {
         sessionId,
         profileId,
-        url: currentUrl,
+        url: session.currentUrl,
         proxy: session.proxy,
         idleTimeoutMs: session.idleTimeoutMs
       };
@@ -624,11 +727,13 @@ export class SessionManager {
       };
     }
 
-    if (!target) {
+    const resolvedTarget = target ?? (kind === "text" || kind === "html" ? "body" : undefined);
+
+    if (!resolvedTarget) {
       throw new AppError("BAD_REQUEST", `get ${kind} requires a target`, 400);
     }
 
-    const locator = await this.resolveTargetLocator(session, target);
+    const locator = await this.resolveTargetLocator(session, resolvedTarget);
     const value = await readLocatorValue(locator, kind, this.config.actionTimeoutMs);
     this.markSessionState(session);
 
@@ -916,12 +1021,27 @@ export class SessionManager {
     return this.toSummary(await this.getSessionOrThrow());
   }
 
-  async closeAll(): Promise<void> {
+  async pruneSessions(maxIdleMs = SessionManager.DEFAULT_PRUNE_IDLE_MS): Promise<PruneSessionsResponse> {
+    const closedSessionIds = await this.pruneInactiveSessions(maxIdleMs);
+    return {
+      closed: closedSessionIds.length,
+      closedSessionIds,
+      maxIdleMs,
+    };
+  }
+
+  async closeAll(): Promise<CloseAllSessionsResponse> {
+    const closedSessionIds: string[] = [];
     for (const session of Array.from(this.sessions.values())) {
+      closedSessionIds.push(session.sessionId);
       await this.destroySession(session);
     }
 
     this.sessions.clear();
     this.activeSessionId = undefined;
+    return {
+      closed: closedSessionIds.length,
+      closedSessionIds,
+    };
   }
 }

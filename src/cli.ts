@@ -119,8 +119,8 @@ const commandUsage: Record<CommandName, string> = {
   upload: "upload <target> <file...> [--session <sessionId>]",
   pdf: "pdf <path> [--session <sessionId>]",
   screenshot: "screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]",
-  close: "close [--session <sessionId>] (aliases: quit, exit)",
-  sessions: "sessions",
+  close: "close [--session <sessionId>] [--all] (aliases: quit, exit)",
+  sessions: "sessions [--prune] [--older-than-ms <ms>]",
   current: "current"
 };
 

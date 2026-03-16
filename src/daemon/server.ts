@@ -82,6 +82,17 @@ async function handleRequest(request: http.IncomingMessage, response: http.Serve
       return;
     }
 
+    if (method === "POST" && pathname === "/sessions/close-all") {
+      writeJsonResponse(response, 200, await sessionManager.closeAll());
+      return;
+    }
+
+    if (method === "POST" && pathname === "/sessions/prune") {
+      const body = (await readJsonBody(request)) as { maxIdleMs?: number } | undefined;
+      writeJsonResponse(response, 200, await sessionManager.pruneSessions(body?.maxIdleMs));
+      return;
+    }
+
     if (method === "POST" && pathname === "/sessions/open") {
       const body = (await readJsonBody(request)) as OpenSessionRequest;
       writeJsonResponse(response, 200, await sessionManager.open(body));

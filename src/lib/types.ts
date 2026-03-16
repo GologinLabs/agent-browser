@@ -244,9 +244,24 @@ export interface CloseSessionResponse {
   closed: true;
 }
 
+export interface CloseAllSessionsResponse {
+  closed: number;
+  closedSessionIds: string[];
+}
+
 export interface SessionsResponse {
   activeSessionId?: string;
   sessions: SessionSummary[];
+}
+
+export interface PruneSessionsRequest {
+  maxIdleMs?: number;
+}
+
+export interface PruneSessionsResponse {
+  closed: number;
+  closedSessionIds: string[];
+  maxIdleMs: number;
 }
 
 export interface TabSummary {
