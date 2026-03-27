@@ -313,6 +313,9 @@ export interface DoctorResponse {
   connectBase: string;
   daemonLogPath: string;
   configPath: string;
+  reachableTransport?: string;
+  trackedSessions?: number;
+  activeSessionId?: string;
   transports: DoctorTransportStatus[];
 }
 

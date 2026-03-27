@@ -2,6 +2,8 @@
 
 Gologin Agent Browser CLI is a cloud browser automation CLI built for AI agents. It turns Gologin Cloud Browser into a persistent, scriptable runtime with compact page snapshots, ref-based interaction, session memory, and shell-friendly commands.
 
+Use this CLI when the task is primarily a live cloud-browser session: login, dashboard work, repeated clicks and typing, screenshots, PDFs, uploads, or session cleanup. If the task is mainly scrape-first reading, extraction, mapping, or crawling on a known site, use `gologin-web-access` instead. If it must run inside a local Orbita profile with persistent local state, use `gologin-local-agent-browser` instead.
+
 It is designed for agent loops that need to stay simple:
 
 - open a live browser session
@@ -42,6 +44,8 @@ The system has two parts:
 The CLI parses commands, auto-starts the daemon when needed, and prints compact output for agents. The daemon owns live browser sessions, connects to Gologin Cloud Browser through Playwright `connectOverCDP`, keeps the active page in memory, builds snapshots, resolves refs like `@e1`, and tracks session metadata such as proxy mode, idle timeout, and generated artifacts.
 
 If you do not provide a profile id, the daemon creates a temporary Gologin cloud profile through the Gologin API, uses it to open the session, and attempts to delete it when the session is closed.
+
+Temporary cloud profiles are convenient, but they inherit GoLogin backend defaults for browser line, fingerprint, and viewport. If you need predictable browser version, country proxy, or screen characteristics, create or reuse an explicit cloud profile and pass `--profile`.
 
 Transport is local only:
 
@@ -132,6 +136,20 @@ gologin-agent-browser click @e3
 gologin-agent-browser close
 ```
 
+## Decision Table
+
+Use `gologin-agent-browser` when:
+
+- the user explicitly wants a cloud browser session
+- the task is login, dashboard work, or repeated interactive browsing
+- screenshots, PDFs, uploads, cookies, storage, or tabs are part of the flow
+- session hygiene itself is the task
+
+Use another GoLogin CLI when:
+
+- the task is scrape-first reading, extraction, mapping, crawling, or monitoring on a known site -> `gologin-web-access`
+- the task depends on a local Orbita profile, persistent local cookies, or repeated rendered-DOM navigation on this machine -> `gologin-local-agent-browser`
+
 ## How Refs Work
 
 `gologin-agent-browser snapshot` prints a compact page view and assigns refs like `@e1`, `@e2`, and `@e3`.
@@ -159,6 +177,8 @@ On dynamic pages, `find ...` is usually a better fallback than stale refs becaus
 ```bash
 gologin-agent-browser open https://example.com --proxy-host 1.2.3.4 --proxy-port 8080 --proxy-mode http --idle-timeout-ms 300000
 gologin-agent-browser open https://example.com --profile your-preconfigured-gologin-profile
+gologin-agent-browser open https://example.com --session s1
+gologin-agent-browser open https://example.org --session s2
 gologin-agent-browser tabs
 gologin-agent-browser tabopen https://www.iana.org
 gologin-agent-browser tabfocus 2
@@ -182,6 +202,34 @@ gologin-agent-browser forward
 gologin-agent-browser reload
 gologin-agent-browser screenshot page.png --annotate --press-escape
 ```
+
+## Parallel Sessions
+
+Independent cloud tasks do not have to run one by one. Use explicit session ids:
+
+```bash
+gologin-agent-browser open https://example.com --session s1
+gologin-agent-browser open https://example.org --session s2
+gologin-agent-browser sessions
+gologin-agent-browser snapshot --session s1 -i
+gologin-agent-browser snapshot --session s2 -i
+```
+
+When the slate should be reset:
+
+```bash
+gologin-agent-browser sessions --prune --older-than-ms 300000
+gologin-agent-browser close --all
+```
+
+`close --all` only closes sessions tracked by the current daemon. If cloud capacity is still exhausted afterward, another daemon or external workflow is likely holding the remaining slot.
+
+## Proxy Rules
+
+- Temporary cloud profiles support no proxy or a custom proxy host/port.
+- `--proxy-country` is not available for temporary cloud profiles.
+- If you need GoLogin country traffic, create or reuse a preconfigured cloud profile and pass `--profile`.
+- Do not invent free proxies as a fallback. If the proxy strategy matters, decide it before opening the session.
 
 ## Commands
 
@@ -242,6 +290,14 @@ gologin-agent-browser doctor --json
 ```
 
 `doctor` reports whether a token is configured, which connect base is configured, which local transports are reachable, and where the daemon log is written.
+
+When a daemon is reachable, `doctor` also reports:
+
+- the reachable transport
+- how many tracked sessions the daemon is holding
+- the active session id, if there is one
+
+`open` now performs an HTTP preflight against the Cloud Browser connect URL before the Playwright CDP handshake. That means common `403` and `503` launch failures surface early with a readable reason instead of being buried inside a generic connection error.
 
 ## Example Session Flow
 

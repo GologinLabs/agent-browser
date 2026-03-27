@@ -30,6 +30,7 @@ function asAriaRole(role?: string): string | undefined {
 }
 
 const GOLOGIN_API_BASE = "https://api.gologin.com";
+const CLOUD_CONNECT_PREFLIGHT_TIMEOUT_MS = 5_000;
 
 function trimToUndefined(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
@@ -142,6 +143,63 @@ export function toPlaywrightCdpUrl(connectUrl: string): string {
   }
 
   return url.toString();
+}
+
+export function describeCloudConnectFailure(status: number, errorReason?: string): string {
+  const reason = trimToUndefined(errorReason);
+  const suffix = reason ? `: ${reason}` : "";
+
+  if (status === 403) {
+    return `Cloud Browser rejected the session start (403)${suffix}. Check GOLOGIN_TOKEN, profile access, and plan permissions.`;
+  }
+
+  if (status === 503) {
+    return `Cloud Browser could not start the session (503)${suffix}. This usually means cloud capacity, a stale launch slot, or a backend launch failure. Try sessions --prune, close --all, or an existing --profile.`;
+  }
+
+  return `Cloud Browser preflight failed with status ${status}${suffix}.`;
+}
+
+export async function preflightCloudConnect(
+  config: AgentConfig,
+  token: string,
+  profileId?: string
+): Promise<string> {
+  const connectUrl = buildConnectUrl(config, token, profileId);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLOUD_CONNECT_PREFLIGHT_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(connectUrl, {
+      method: "GET",
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const headerReason = trimToUndefined(response.headers.get("x-error-reason") ?? undefined);
+      const bodyReason = trimToUndefined(await response.text().catch(() => ""));
+      const errorReason = headerReason ?? bodyReason;
+      throw new AppError(
+        "BROWSER_CONNECTION_FAILED",
+        describeCloudConnectFailure(response.status, errorReason),
+        502,
+        {
+          profileId,
+          connectStatus: response.status,
+          errorReason
+        }
+      );
+    }
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    // Best-effort diagnostics only. If the HTTP preflight itself is unavailable, still try CDP.
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  return connectUrl;
 }
 
 function extractProfileId(payload: unknown): string | undefined {
@@ -284,10 +342,11 @@ export async function connectToBrowser(
   token: string,
   profileId?: string
 ): Promise<Pick<SessionRecord, "browser" | "context" | "page" | "connectUrl">> {
-  const connectUrl = toPlaywrightCdpUrl(buildConnectUrl(config, token, profileId));
+  const connectUrl = await preflightCloudConnect(config, token, profileId);
+  const playwrightConnectUrl = toPlaywrightCdpUrl(connectUrl);
 
   try {
-    const browser = await chromium.connectOverCDP(connectUrl);
+    const browser = await chromium.connectOverCDP(playwrightConnectUrl);
     const { context, page } = await pickContextAndPage(browser);
     return { browser, context, page, connectUrl };
   } catch (error) {

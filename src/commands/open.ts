@@ -26,7 +26,7 @@ function parseProxy(parsed: ReturnType<typeof parseArgs>): ProxyConfig | undefin
   if (country) {
     throw new AppError(
       "BAD_REQUEST",
-      "--proxy-country is not available for temporary cloud profiles yet; use a preconfigured --profile or a custom proxy host/port",
+      "--proxy-country is not available for temporary cloud profiles. Use a preconfigured --profile for GoLogin country traffic, or pass a custom proxy host/port for an ephemeral session.",
       400
     );
   }
@@ -83,4 +83,10 @@ export async function runOpenCommand(context: CommandContext, argv: string[]): P
   const liveView = response.liveViewUrl ? ` liveview=${response.liveViewUrl}` : "";
   const idleTimeout = response.idleTimeoutMs !== undefined ? ` idleTimeoutMs=${response.idleTimeoutMs}` : "";
   context.stdout.write(`session=${response.sessionId} url=${response.url}${proxyToken}${idleTimeout}${liveView}\n`);
+
+  if (!profileId && !context.config.defaultProfileId) {
+    context.stderr.write(
+      "note: temporary cloud profiles use GoLogin backend defaults for browser line and viewport. Use --profile when you need explicit fingerprint, proxy-country, or screen settings.\n"
+    );
+  }
 }

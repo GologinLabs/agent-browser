@@ -15,6 +15,15 @@ function writeDoctorReport(context: CommandContext, report: DoctorResponse): voi
   context.stdout.write(`connectBase=${report.connectBase}\n`);
   context.stdout.write(`configPath=${report.configPath}\n`);
   context.stdout.write(`daemonLogPath=${report.daemonLogPath}\n`);
+  if (report.reachableTransport) {
+    context.stdout.write(`reachableTransport=${report.reachableTransport}\n`);
+  }
+  if (report.trackedSessions !== undefined) {
+    context.stdout.write(`trackedSessions=${report.trackedSessions}\n`);
+  }
+  if (report.activeSessionId) {
+    context.stdout.write(`activeSessionId=${report.activeSessionId}\n`);
+  }
 
   for (const transport of report.transports) {
     context.stdout.write(`transport=${transport.label} reachable=${transport.reachable}\n`);

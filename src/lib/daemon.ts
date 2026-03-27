@@ -10,7 +10,9 @@ import type {
   DaemonClient,
   DoctorResponse,
   HealthResponse,
-  ResolvedTransport
+  ResolvedTransport,
+  SessionsResponse,
+  SessionSummary
 } from "./types";
 import { isDaemonErrorResponse, makeTransportLabel } from "./utils";
 
@@ -145,12 +147,32 @@ export async function probeTransport(transport: ResolvedTransport): Promise<bool
 }
 
 export async function inspectDaemon(config: AgentConfig): Promise<DoctorResponse> {
+  const resolvedTransports = buildDaemonTransports(config);
   const transports = await Promise.all(
-    buildDaemonTransports(config).map(async (transport) => ({
+    resolvedTransports.map(async (transport) => ({
       label: makeTransportLabel(transport),
       reachable: await probeTransport(transport)
     }))
   );
+  const reachableTransport = resolvedTransports.find((transport, index) => transports[index]?.reachable);
+  let trackedSessions: number | undefined;
+  let activeSessionId: string | undefined;
+
+  if (reachableTransport) {
+    try {
+      const sessions = (await requestOverHttp(reachableTransport, "GET", "/sessions")) as SessionsResponse;
+      trackedSessions = sessions.sessions.length;
+      activeSessionId = sessions.activeSessionId;
+    } catch {
+      try {
+        const current = (await requestOverHttp(reachableTransport, "GET", "/sessions/current")) as SessionSummary;
+        trackedSessions = trackedSessions ?? 1;
+        activeSessionId = current.sessionId;
+      } catch {
+        // Ignore session-inspection failures. Transport reachability is the primary doctor signal.
+      }
+    }
+  }
 
   return {
     ok: transports.some((transport) => transport.reachable),
@@ -159,6 +181,9 @@ export async function inspectDaemon(config: AgentConfig): Promise<DoctorResponse
     connectBase: config.connectBase,
     daemonLogPath: config.logPath,
     configPath: config.configPath,
+    reachableTransport: reachableTransport ? makeTransportLabel(reachableTransport) : undefined,
+    trackedSessions,
+    activeSessionId,
     transports
   };
 }
