@@ -1,8 +1,8 @@
-# Gologin Agent Browser CLI
+# GoLogin Agent Browser CLI
 
-Gologin Agent Browser CLI lets agents run real GoLogin cloud profiles, interact with pages, keep sessions alive, and manage the profile/proxy API from shell-friendly commands.
+GoLogin Agent Browser CLI lets agents run real GoLogin browser profiles, interact with pages, keep sessions alive, and manage profile/proxy operations from shell-friendly commands.
 
-Use this CLI when the task is primarily a live cloud-browser session: login, dashboard work, repeated clicks and typing, screenshots, PDFs, uploads, or session cleanup. If the task is mainly scrape-first reading, extraction, mapping, or crawling on a known site, use `gologin-web-access` instead. If it must run inside a local Orbita profile with persistent local state, use `gologin-local-agent-browser` instead.
+Use this CLI when the task is primarily live browser automation: login, dashboard work, repeated clicks and typing, screenshots, PDFs, uploads, warmup, profile hygiene, or browser session cleanup. If the task is mainly scrape-first reading, extraction, mapping, or crawling on a known site, use `gologin-web-access` instead.
 
 It is designed for agent loops that need to stay simple:
 
@@ -14,39 +14,43 @@ It is designed for agent loops that need to stay simple:
 - inspect daemon health with `doctor`
 - manage tabs, cookies, storage, and in-page eval without dropping to raw Playwright
 - call common GoLogin REST API operations for cloud profile start/stop, usage, cookies, proxies, fingerprint refresh, and user-agent updates
+- choose the runtime per task: cloud browser or local Orbita profile
 
-Unlike local-browser automation tools, it runs on top of a cloud browser stack built around Gologin profiles, proxies, fingerprinting, and anti-detect capabilities.
+Unlike generic browser automation tools, it runs on top of GoLogin profiles, proxies, fingerprinting, anti-detect capabilities, and the same command model for cloud and local runtimes.
 
-## Why Cloud Browser
+## Runtime Model
 
-Local-browser automation is convenient, but it comes with hard limits for agent workflows that need to survive real-world websites:
+The public product is one CLI with two runtime providers:
 
-- local browsers are easier to detect
-- local runs usually do not carry profile-based fingerprinting
-- local runs do not come with persistent cloud browser profiles
-- local networking is limited unless you bolt on your own proxy layer
-- local sessions are harder to standardize across agents and environments
+- `cloud`: GoLogin Cloud Browser. Use it for remote browser sessions, parallel cloud tasks, screenshots/PDFs, and workflows where the local machine should not run Orbita.
+- `local`: local GoLogin Orbita. Use it for profile warmup, native desktop profile state, first-login checkpoints, local OS alignment, and workflows that should reuse local Orbita state.
 
-Gologin Agent Browser CLI takes the opposite approach:
+Cloud is the default because it is the safest agent baseline. Select local explicitly when local profile state matters:
 
-- cloud browser runtime instead of a local browser process
-- Gologin profiles as the session identity layer
-- proxy-aware browser sessions
-- fingerprint and anti-detect capabilities inherited from Gologin
-- a persistent daemon that keeps agent sessions alive across CLI calls
+```bash
+gologin-agent-browser open https://example.com
+gologin-agent-browser open https://example.com --runtime cloud
+gologin-agent-browser open https://example.com --runtime local
+gologin-agent-browser local open https://example.com
+```
+
+Local-only commands such as `profile-create`, `profile-update`, `run`, `batch`, and `jobs` automatically route to the local runtime, so agents do not need the old separate binary.
 
 ## Architecture
 
-The system has two parts:
+The system has three parts:
 
 - `gologin-agent-browser` CLI
-- a persistent local daemon
+- cloud runtime daemon
+- embedded local Orbita runtime daemon
 
-The CLI parses commands, auto-starts the daemon when needed, and prints compact output for agents. The daemon owns live browser sessions, connects to Gologin Cloud Browser through Playwright `connectOverCDP`, keeps the active page in memory, builds snapshots, resolves refs like `@e1`, and tracks session metadata such as proxy mode, idle timeout, and generated artifacts.
+The CLI parses commands, chooses a runtime, auto-starts the matching daemon when needed, and prints compact output for agents. Runtime daemons own live browser sessions, connect through Playwright `connectOverCDP`, keep the active page in memory, build snapshots, resolve refs like `@e1`, and track session metadata such as proxy mode, idle timeout, and generated artifacts.
 
-If you do not provide a profile id, the daemon creates a temporary Gologin cloud profile through the Gologin API, uses it to open the session, and attempts to delete it when the session is closed.
+For cloud runtime, if you do not provide a profile id, the daemon creates a temporary GoLogin cloud profile through the GoLogin API, uses it to open the session, and attempts to delete it when the session is closed.
 
 Temporary cloud profiles are convenient, but they inherit GoLogin backend defaults for browser line, fingerprint, and viewport. If you need predictable browser version, country proxy, or screen characteristics, create or reuse an explicit cloud profile and pass `--profile`.
+
+For local runtime, a profile id is required for real browser sessions. Local runtime keeps compatibility with existing local-agent state under `~/.gologin-local-agent-browser/` so current warmup profiles and job history remain usable during migration.
 
 Transport is local only:
 
@@ -110,8 +114,10 @@ If you prefer a local config file instead of an environment variable, save the s
 
 - `GOLOGIN_TOKEN` required for `open` and REST-backed profile/proxy commands
 - `GOLOGIN_PROFILE_ID` optional default profile for `open`
-- `GOLOGIN_DAEMON_PORT` optional, defaults to `44777`
+- `GOLOGIN_AGENT_BROWSER_RUNTIME` optional default runtime: `cloud`, `local`, or `auto`
+- `GOLOGIN_DAEMON_PORT` optional. Cloud defaults to `44777`; local defaults to `44778`
 - `GOLOGIN_CONNECT_BASE` optional, defaults to `https://cloudbrowser.gologin.com/connect`
+- `GOLOGIN_EXECUTABLE_PATH` optional local Orbita executable path for local runtime
 
 Optional config file:
 
@@ -137,19 +143,31 @@ gologin-agent-browser click @e3
 gologin-agent-browser close
 ```
 
+Local profile quickstart:
+
+```bash
+export GOLOGIN_TOKEN='your_gologin_token'
+
+gologin-agent-browser profile-create "reddit-main" --template smm --proxy-country us
+gologin-agent-browser open https://example.com --runtime local --profile your_profile_id
+gologin-agent-browser snapshot -i --runtime local
+gologin-agent-browser close --runtime local
+```
+
 ## Decision Table
 
 Use `gologin-agent-browser` when:
 
-- the user explicitly wants a cloud browser session
+- the user explicitly wants a GoLogin browser session
 - the task is login, dashboard work, or repeated interactive browsing
 - screenshots, PDFs, uploads, cookies, storage, or tabs are part of the flow
 - session hygiene itself is the task
 
-Use another GoLogin CLI when:
+Runtime choice:
 
-- the task is scrape-first reading, extraction, mapping, crawling, or monitoring on a known site -> `gologin-web-access`
-- the task depends on a local Orbita profile, persistent local cookies, or repeated rendered-DOM navigation on this machine -> `gologin-local-agent-browser`
+- use `--runtime cloud` for cloud scale, remote browser sessions, or no-local-browser workflows
+- use `--runtime local` for local Orbita, warmup, native OS, and persistent local profile workflows
+- use `gologin-web-access` instead for scrape-first reading, extraction, mapping, crawling, or monitoring on a known site
 
 ## How Refs Work
 
@@ -212,6 +230,10 @@ gologin-agent-browser profile-ua latest --os mac
 gologin-agent-browser profile-ua update your-profile-id
 gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --type residential
 gologin-agent-browser profile-proxy traffic
+gologin-agent-browser profile-create "LinkedIn AE 01" --template linkedin --proxy-country us
+gologin-agent-browser profile-update your-profile-id --template smm --add-tags warm,logged-in
+gologin-agent-browser run ./examples/runbook-warmup.json --runtime local --profile your-profile-id
+gologin-agent-browser jobs
 ```
 
 ## Parallel Sessions
@@ -259,6 +281,17 @@ gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --t
 - `profile-fingerprint refresh <profileId...> [--json]`
 - `profile-proxy <list|traffic|add-gologin> ... [--json]`
 - `profile-ua <latest|update> ... [--json]`
+- `profiles [--local|--remote|--all] [--json]`
+- `profile <profileId> [--local|--remote] [--json]`
+- `profile-create <name> [--template <linkedin|ads|facebook|smm|scraping|geo>] [--proxy-country <country> | --proxy-host <host> --proxy-port <port>]`
+- `profile-update <profileId> [--template <linkedin|ads|facebook|smm|scraping|geo>] [--proxy-country <country> | --proxy-host <host> --proxy-port <port>]`
+- `profile-import <profileId>`
+- `profile-sync <profileId> [--json]`
+- `profile-delete <profileId> [--remote]`
+- `run <runbook.json> [--profile <profileId>] [--runtime local]`
+- `batch <runbook.json> --targets <targets.json> [--runtime local]`
+- `jobs [--json]`
+- `job <jobId> [--json]`
 - `open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>]`
 - `open <url> [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5> --proxy-user <user> --proxy-pass <pass>]`
 - `tabs [--session <sessionId>]`
@@ -379,13 +412,13 @@ Supported aliases:
 - Annotated screenshots are based on the current snapshot/ref model, so labels are also best-effort on highly dynamic pages.
 - `screenshot` has a hard timeout and supports `--press-escape` for pages with modals, chat widgets, or overlay-driven render issues.
 - The daemon keeps only the latest snapshot ref map for each session.
-- Real browser sessions require a valid Gologin Cloud Browser account and token. A profile id is optional.
-- Token-only mode works by provisioning a temporary cloud profile through the Gologin API before connecting to Cloud Browser.
+- Real browser sessions require a valid GoLogin account token. A profile id is optional for cloud runtime and required for local runtime.
+- Cloud token-only mode works by provisioning a temporary cloud profile through the GoLogin API before connecting to Cloud Browser.
 - Proxy support is cloud-profile based. Temporary profiles can be created with a custom proxy definition, and existing Gologin profiles can be reused with `--profile` if they already have a managed proxy attached.
 - Profile-management commands wrap public GoLogin REST API endpoints; they are convenience commands, not a replacement for the full API.
-- Local Orbita is intentionally out of scope. This project targets Gologin Cloud Browser only.
+- Local Orbita runtime is bundled as a provider and keeps its existing local state directory for migration safety.
 - Gologin cloud live-view URLs are not auto-fetched by default because the current endpoint can interfere with an active CDP session.
-- Playwright is the automation layer on top of Gologin Cloud Browser. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
+- Playwright is the automation layer on top of the selected GoLogin browser runtime. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
 
 ## Test Coverage
 

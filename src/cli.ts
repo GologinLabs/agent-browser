@@ -47,6 +47,7 @@ import { runWaitCommand } from "./commands/wait";
 import { createHealthyDaemonClient } from "./lib/daemon";
 import { loadConfig } from "./lib/config";
 import { AppError, formatErrorLine } from "./lib/errors";
+import { extractRuntimeSelection, runLocalRuntimeCli, shouldRouteToLocalRuntime } from "./lib/runtimeRouting";
 import type { CommandContext } from "./lib/types";
 
 type CommandName =
@@ -149,6 +150,8 @@ function printUsage(): void {
       "",
       "Usage:",
       "  gologin-agent-browser <command> [args] [options]",
+      "  gologin-agent-browser --runtime <cloud|local|auto> <command> [args] [options]",
+      "  gologin-agent-browser local <command> [args] [options]",
       "",
       "Commands:",
       ...Object.values(commandUsage).map((usage) => `  ${usage}`),
@@ -156,8 +159,10 @@ function printUsage(): void {
       "Environment:",
       "  GOLOGIN_TOKEN",
       "  GOLOGIN_PROFILE_ID",
+      "  GOLOGIN_AGENT_BROWSER_RUNTIME",
       "  GOLOGIN_DAEMON_PORT",
-      "  GOLOGIN_CONNECT_BASE"
+      "  GOLOGIN_CONNECT_BASE",
+      "  GOLOGIN_EXECUTABLE_PATH (local runtime)"
     ].join("\n") + "\n"
   );
 }
@@ -395,7 +400,13 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
 }
 
 export async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
+  const selection = extractRuntimeSelection(process.argv.slice(2));
+  if (shouldRouteToLocalRuntime(selection)) {
+    await runLocalRuntimeCli(selection.args);
+    return;
+  }
+
+  const argv = selection.args;
   const commandArg = argv[0];
 
   if (!commandArg || commandArg === "--help" || commandArg === "-h") {

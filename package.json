@@ -1,7 +1,7 @@
 {
   "name": "gologin-agent-browser-cli",
-  "version": "0.2.2",
-  "description": "Agent-native cloud browser automation CLI for Gologin",
+  "version": "0.3.0",
+  "description": "Agent-native GoLogin browser automation CLI with cloud and local Orbita runtimes",
   "main": "dist/cli.js",
   "types": "dist/lib/types.d.ts",
   "files": [
@@ -11,7 +11,8 @@
     "examples/agent-flow.sh"
   ],
   "bin": {
-    "gologin-agent-browser": "dist/cli.js"
+    "gologin-agent-browser": "dist/cli.js",
+    "gologin-local-agent-browser": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -39,6 +40,8 @@
     "agent",
     "cli",
     "cloud-browser",
+    "local-browser",
+    "orbita",
     "anti-detect",
     "fingerprint",
     "proxy",
@@ -51,6 +54,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "gologin": "^2.2.8",
     "playwright": "^1.58.2"
   },
   "devDependencies": {
