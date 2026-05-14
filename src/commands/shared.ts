@@ -57,5 +57,5 @@ export function writeJsonFile(context: CommandContext, targetPath: string, paylo
 }
 
 export function writeJsonStdout(context: CommandContext, payload: unknown): void {
-  context.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  context.stdout.write(`${JSON.stringify(payload ?? null, null, 2)}\n`);
 }

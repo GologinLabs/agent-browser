@@ -23,10 +23,12 @@ test("parseArgs supports short interactive flag and boolean flags", () => {
   assert.deepEqual(parsed.positional, ["button"]);
 });
 
-test("parseArgs supports session hygiene boolean flags", () => {
-  const parsed = parseArgs(["--all", "--prune"]);
+test("parseArgs supports session and API boolean flags", () => {
+  const parsed = parseArgs(["--all", "--prune", "--clean", "--all-profiles"]);
   assert.equal(parsed.flags.all, true);
   assert.equal(parsed.flags.prune, true);
+  assert.equal(parsed.flags.clean, true);
+  assert.equal(parsed.flags["all-profiles"], true);
 });
 
 test("formatSessionLine marks active session", () => {

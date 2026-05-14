@@ -4,6 +4,7 @@ import { runBackCommand } from "./commands/back";
 import { runCheckCommand } from "./commands/check";
 import { runClickCommand } from "./commands/click";
 import { runCloseCommand } from "./commands/close";
+import { runCloudUsageCommand } from "./commands/cloudUsage";
 import { runCookiesCommand } from "./commands/cookies";
 import { runCookiesClearCommand } from "./commands/cookiesClear";
 import { runCookiesImportCommand } from "./commands/cookiesImport";
@@ -20,6 +21,11 @@ import { runHoverCommand } from "./commands/hover";
 import { runOpenCommand } from "./commands/open";
 import { runPdfCommand } from "./commands/pdf";
 import { runPressCommand } from "./commands/press";
+import { runProfileCloudCommand } from "./commands/profileCloud";
+import { runProfileCookiesCommand } from "./commands/profileCookies";
+import { runProfileFingerprintCommand } from "./commands/profileFingerprint";
+import { runProfileProxyCommand } from "./commands/profileProxy";
+import { runProfileUaCommand } from "./commands/profileUa";
 import { runReloadCommand } from "./commands/reload";
 import { runScreenshotCommand } from "./commands/screenshot";
 import { runScrollCommand } from "./commands/scroll";
@@ -46,6 +52,12 @@ import type { CommandContext } from "./lib/types";
 type CommandName =
   | "open"
   | "doctor"
+  | "cloud-usage"
+  | "profile-cloud"
+  | "profile-cookies"
+  | "profile-fingerprint"
+  | "profile-proxy"
+  | "profile-ua"
   | "tabs"
   | "tabopen"
   | "tabfocus"
@@ -86,6 +98,12 @@ type CommandName =
 const commandUsage: Record<CommandName, string> = {
   open: "open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5>] (aliases: goto, navigate)",
   doctor: "doctor [--json]",
+  "cloud-usage": "cloud-usage --profile <profileId> | --workspace <workspaceId> [--days <1-30>] [--json]",
+  "profile-cloud": "profile-cloud <start|stop> <profileId> [--json]",
+  "profile-cookies": "profile-cookies <export|import> <profileId> [cookies.json] [--output <path>] [--clean] [--json]",
+  "profile-fingerprint": "profile-fingerprint refresh <profileId...> [--json]",
+  "profile-proxy": "profile-proxy <list|traffic|add-gologin> ... [--json]",
+  "profile-ua": "profile-ua <latest|update> ... [--json]",
   tabs: "tabs [--session <sessionId>]",
   tabopen: "tabopen [url] [--session <sessionId>] (alias: tabnew)",
   tabfocus: "tabfocus <index> [--session <sessionId>] (alias: tabswitch)",
@@ -157,7 +175,15 @@ function printCommandUsage(command: CommandName): void {
 }
 
 function commandRequiresDaemon(command: CommandName): boolean {
-  return command !== "doctor";
+  return !new Set<CommandName>([
+    "doctor",
+    "cloud-usage",
+    "profile-cloud",
+    "profile-cookies",
+    "profile-fingerprint",
+    "profile-proxy",
+    "profile-ua"
+  ]).has(command);
 }
 
 export function isHelpRequest(argv: string[]): boolean {
@@ -171,6 +197,24 @@ async function runCommand(command: CommandName, context: CommandContext, args: s
       return;
     case "doctor":
       await runDoctorCommand(context, args);
+      return;
+    case "cloud-usage":
+      await runCloudUsageCommand(context, args);
+      return;
+    case "profile-cloud":
+      await runProfileCloudCommand(context, args);
+      return;
+    case "profile-cookies":
+      await runProfileCookiesCommand(context, args);
+      return;
+    case "profile-fingerprint":
+      await runProfileFingerprintCommand(context, args);
+      return;
+    case "profile-proxy":
+      await runProfileProxyCommand(context, args);
+      return;
+    case "profile-ua":
+      await runProfileUaCommand(context, args);
       return;
     case "tabs":
       await runTabsCommand(context, args);
@@ -303,6 +347,12 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
   const directCommands = new Set<CommandName>([
     "open",
     "doctor",
+    "cloud-usage",
+    "profile-cloud",
+    "profile-cookies",
+    "profile-fingerprint",
+    "profile-proxy",
+    "profile-ua",
     "tabs",
     "tabopen",
     "tabfocus",

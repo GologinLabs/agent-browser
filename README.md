@@ -1,6 +1,6 @@
 # Gologin Agent Browser CLI
 
-Gologin Agent Browser CLI is a cloud browser automation CLI built for AI agents. It turns Gologin Cloud Browser into a persistent, scriptable runtime with compact page snapshots, ref-based interaction, session memory, and shell-friendly commands.
+Gologin Agent Browser CLI lets agents run real GoLogin cloud profiles, interact with pages, keep sessions alive, and manage the profile/proxy API from shell-friendly commands.
 
 Use this CLI when the task is primarily a live cloud-browser session: login, dashboard work, repeated clicks and typing, screenshots, PDFs, uploads, or session cleanup. If the task is mainly scrape-first reading, extraction, mapping, or crawling on a known site, use `gologin-web-access` instead. If it must run inside a local Orbita profile with persistent local state, use `gologin-local-agent-browser` instead.
 
@@ -13,6 +13,7 @@ It is designed for agent loops that need to stay simple:
 - save artifacts such as screenshots and PDFs when needed
 - inspect daemon health with `doctor`
 - manage tabs, cookies, storage, and in-page eval without dropping to raw Playwright
+- call common GoLogin REST API operations for cloud profile start/stop, usage, cookies, proxies, fingerprint refresh, and user-agent updates
 
 Unlike local-browser automation tools, it runs on top of a cloud browser stack built around Gologin profiles, proxies, fingerprinting, and anti-detect capabilities.
 
@@ -107,7 +108,7 @@ If you prefer a local config file instead of an environment variable, save the s
 
 ## Required Environment
 
-- `GOLOGIN_TOKEN` required for `open`
+- `GOLOGIN_TOKEN` required for `open` and REST-backed profile/proxy commands
 - `GOLOGIN_PROFILE_ID` optional default profile for `open`
 - `GOLOGIN_DAEMON_PORT` optional, defaults to `44777`
 - `GOLOGIN_CONNECT_BASE` optional, defaults to `https://cloudbrowser.gologin.com/connect`
@@ -201,6 +202,16 @@ gologin-agent-browser back
 gologin-agent-browser forward
 gologin-agent-browser reload
 gologin-agent-browser screenshot page.png --annotate --press-escape
+gologin-agent-browser cloud-usage --profile your-profile-id
+gologin-agent-browser profile-cloud start your-profile-id
+gologin-agent-browser profile-cloud stop your-profile-id
+gologin-agent-browser profile-cookies export your-profile-id --output cookies.json
+gologin-agent-browser profile-cookies import your-profile-id cookies.json --clean
+gologin-agent-browser profile-fingerprint refresh your-profile-id
+gologin-agent-browser profile-ua latest --os mac
+gologin-agent-browser profile-ua update your-profile-id
+gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --type residential
+gologin-agent-browser profile-proxy traffic
 ```
 
 ## Parallel Sessions
@@ -228,12 +239,26 @@ gologin-agent-browser close --all
 
 - Temporary cloud profiles support no proxy or a custom proxy host/port.
 - `--proxy-country` is not available for temporary cloud profiles.
-- If you need GoLogin country traffic, create or reuse a preconfigured cloud profile and pass `--profile`.
+- If you need GoLogin country traffic, attach a managed proxy to a reusable profile with `profile-proxy add-gologin <profileId> --country us`, then pass `--profile`.
 - Do not invent free proxies as a fallback. If the proxy strategy matters, decide it before opening the session.
+
+REST-backed proxy commands do not require the daemon:
+
+```bash
+gologin-agent-browser profile-proxy list --json
+gologin-agent-browser profile-proxy traffic
+gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --type residential
+```
 
 ## Commands
 
 - `doctor [--json]`
+- `cloud-usage --profile <profileId> | --workspace <workspaceId> [--days <1-30>] [--json]`
+- `profile-cloud <start|stop> <profileId> [--json]`
+- `profile-cookies <export|import> <profileId> [cookies.json] [--output <path>] [--clean] [--json]`
+- `profile-fingerprint refresh <profileId...> [--json]`
+- `profile-proxy <list|traffic|add-gologin> ... [--json]`
+- `profile-ua <latest|update> ... [--json]`
 - `open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>]`
 - `open <url> [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5> --proxy-user <user> --proxy-pass <pass>]`
 - `tabs [--session <sessionId>]`
@@ -275,11 +300,12 @@ gologin-agent-browser close --all
 
 ## Help And Diagnostics
 
-Subcommand help now works without a daemon round-trip:
+Subcommand help and REST-backed profile/proxy commands work without a daemon round-trip:
 
 ```bash
 gologin-agent-browser open --help
 gologin-agent-browser screenshot --help
+gologin-agent-browser profile-ua latest --os mac
 ```
 
 When bootstrap is flaky, inspect the local setup directly:
@@ -356,6 +382,7 @@ Supported aliases:
 - Real browser sessions require a valid Gologin Cloud Browser account and token. A profile id is optional.
 - Token-only mode works by provisioning a temporary cloud profile through the Gologin API before connecting to Cloud Browser.
 - Proxy support is cloud-profile based. Temporary profiles can be created with a custom proxy definition, and existing Gologin profiles can be reused with `--profile` if they already have a managed proxy attached.
+- Profile-management commands wrap public GoLogin REST API endpoints; they are convenience commands, not a replacement for the full API.
 - Local Orbita is intentionally out of scope. This project targets Gologin Cloud Browser only.
 - Gologin cloud live-view URLs are not auto-fetched by default because the current endpoint can interfere with an active CDP session.
 - Playwright is the automation layer on top of Gologin Cloud Browser. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
