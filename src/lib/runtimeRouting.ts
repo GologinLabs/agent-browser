@@ -28,6 +28,16 @@ const localOnlyCommands = new Set([
   "open-background"
 ]);
 
+const cloudApiCommands = new Set([
+  "api",
+  "cloud-usage",
+  "profile-cloud",
+  "profile-cookies",
+  "profile-fingerprint",
+  "profile-proxy",
+  "profile-ua"
+]);
+
 function normalizeRuntime(value: string): AgentRuntime {
   if (value === "cloud" || value === "local" || value === "auto") {
     return value;
@@ -93,6 +103,12 @@ export function extractRuntimeSelection(argv: string[]): RuntimeSelection {
 }
 
 export function shouldRouteToLocalRuntime(selection: RuntimeSelection): boolean {
+  const command = selection.args[0];
+
+  if (command && cloudApiCommands.has(command)) {
+    return false;
+  }
+
   if (selection.runtime === "local") {
     return true;
   }
@@ -101,7 +117,6 @@ export function shouldRouteToLocalRuntime(selection: RuntimeSelection): boolean 
     return false;
   }
 
-  const command = selection.args[0];
   return Boolean(command && localOnlyCommands.has(command));
 }
 

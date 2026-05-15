@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { runBackCommand } from "./commands/back";
+import { runApiCommand } from "./commands/api";
 import { runCheckCommand } from "./commands/check";
 import { runClickCommand } from "./commands/click";
 import { runCloseCommand } from "./commands/close";
@@ -51,6 +52,7 @@ import { extractRuntimeSelection, runLocalRuntimeCli, shouldRouteToLocalRuntime 
 import type { CommandContext } from "./lib/types";
 
 type CommandName =
+  | "api"
   | "open"
   | "doctor"
   | "cloud-usage"
@@ -97,6 +99,7 @@ type CommandName =
   | "current";
 
 const commandUsage: Record<CommandName, string> = {
+  api: "api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]",
   open: "open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5>] (aliases: goto, navigate)",
   doctor: "doctor [--json]",
   "cloud-usage": "cloud-usage --profile <profileId> | --workspace <workspaceId> [--days <1-30>] [--json]",
@@ -181,6 +184,7 @@ function printCommandUsage(command: CommandName): void {
 
 function commandRequiresDaemon(command: CommandName): boolean {
   return !new Set<CommandName>([
+    "api",
     "doctor",
     "cloud-usage",
     "profile-cloud",
@@ -197,6 +201,9 @@ export function isHelpRequest(argv: string[]): boolean {
 
 async function runCommand(command: CommandName, context: CommandContext, args: string[]): Promise<void> {
   switch (command) {
+    case "api":
+      await runApiCommand(context, args);
+      return;
     case "open":
       await runOpenCommand(context, args);
       return;
@@ -350,6 +357,7 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
   }
 
   const directCommands = new Set<CommandName>([
+    "api",
     "open",
     "doctor",
     "cloud-usage",

@@ -13,7 +13,7 @@ It is designed for agent loops that need to stay simple:
 - save artifacts such as screenshots and PDFs when needed
 - inspect daemon health with `doctor`
 - manage tabs, cookies, storage, and in-page eval without dropping to raw Playwright
-- call common GoLogin REST API operations for cloud profile start/stop, usage, cookies, proxies, fingerprint refresh, and user-agent updates
+- call any GoLogin REST API endpoint through the raw `api` command, plus first-class shortcuts for the most common profile/proxy operations
 - choose the runtime per task: cloud browser or local Orbita profile
 
 Unlike generic browser automation tools, it runs on top of GoLogin profiles, proxies, fingerprinting, anti-detect capabilities, and the same command model for cloud and local runtimes.
@@ -220,6 +220,8 @@ gologin-agent-browser back
 gologin-agent-browser forward
 gologin-agent-browser reload
 gologin-agent-browser screenshot page.png --annotate --press-escape
+gologin-agent-browser api GET /browser/v2 --query page=1
+gologin-agent-browser api PATCH /browser/your-profile-id/proxy --data '{"mode":"gologin","autoProxyRegion":"us"}'
 gologin-agent-browser cloud-usage --profile your-profile-id
 gologin-agent-browser profile-cloud start your-profile-id
 gologin-agent-browser profile-cloud stop your-profile-id
@@ -272,9 +274,22 @@ gologin-agent-browser profile-proxy traffic
 gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --type residential
 ```
 
+Any GoLogin REST API endpoint can be called directly when there is no first-class shortcut yet:
+
+```bash
+gologin-agent-browser api GET /browser/v2 --query page=1
+gologin-agent-browser api GET /browser/your-profile-id
+gologin-agent-browser api PUT /browser/your-profile-id --body-file ./profile-update.json
+gologin-agent-browser api PATCH /browser/your-profile-id/name --data '{"name":"LinkedIn AE 01"}'
+gologin-agent-browser api POST /browser/browsers.csv --data '{"browserIds":["profile-id"]}' --output profiles.csv
+```
+
+`api` uses `GOLOGIN_TOKEN`, does not start the browser daemon, accepts repeated `--query key=value`, and accepts JSON bodies either inline (`--data '{"x":1}'`) or from a file (`--data @payload.json` / `--body-file payload.json`).
+
 ## Commands
 
 - `doctor [--json]`
+- `api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]`
 - `cloud-usage --profile <profileId> | --workspace <workspaceId> [--days <1-30>] [--json]`
 - `profile-cloud <start|stop> <profileId> [--json]`
 - `profile-cookies <export|import> <profileId> [cookies.json] [--output <path>] [--clean] [--json]`
@@ -333,11 +348,12 @@ gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --t
 
 ## Help And Diagnostics
 
-Subcommand help and REST-backed profile/proxy commands work without a daemon round-trip:
+Subcommand help, raw API calls, and REST-backed profile/proxy commands work without a daemon round-trip:
 
 ```bash
 gologin-agent-browser open --help
 gologin-agent-browser screenshot --help
+gologin-agent-browser api GET /user
 gologin-agent-browser profile-ua latest --os mac
 ```
 
@@ -415,7 +431,7 @@ Supported aliases:
 - Real browser sessions require a valid GoLogin account token. A profile id is optional for cloud runtime and required for local runtime.
 - Cloud token-only mode works by provisioning a temporary cloud profile through the GoLogin API before connecting to Cloud Browser.
 - Proxy support is cloud-profile based. Temporary profiles can be created with a custom proxy definition, and existing Gologin profiles can be reused with `--profile` if they already have a managed proxy attached.
-- Profile-management commands wrap public GoLogin REST API endpoints; they are convenience commands, not a replacement for the full API.
+- The raw `api` command covers the full public GoLogin REST API surface. Named profile/proxy commands are convenience shortcuts for the highest-frequency operations.
 - Local Orbita runtime is bundled as a provider and keeps its existing local state directory for migration safety.
 - Gologin cloud live-view URLs are not auto-fetched by default because the current endpoint can interfere with an active CDP session.
 - Playwright is the automation layer on top of the selected GoLogin browser runtime. The browser runtime itself does not expose built-in agent actions such as `click()` or `type()`.
