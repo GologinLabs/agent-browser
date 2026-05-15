@@ -10,6 +10,7 @@ type ApiCommandOptions = {
   method: string;
   path: string;
   query: Record<string, string | number | boolean | undefined>;
+  headers: Record<string, string | number | boolean | undefined>;
   body?: unknown;
   output?: string;
   json: boolean;
@@ -24,7 +25,7 @@ export function parseApiCommandArgs(argv: string[], cwd = process.cwd()): ApiCom
   if (!method || !apiPath) {
     throw new AppError(
       "BAD_REQUEST",
-      "Usage: gologin-agent-browser api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]",
+      "Usage: gologin-agent-browser api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--header k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]",
       400
     );
   }
@@ -34,6 +35,7 @@ export function parseApiCommandArgs(argv: string[], cwd = process.cwd()): ApiCom
   }
 
   const query: ApiCommandOptions["query"] = {};
+  const headers: ApiCommandOptions["headers"] = {};
   let body: unknown;
   let output: string | undefined;
   let json = false;
@@ -52,6 +54,16 @@ export function parseApiCommandArgs(argv: string[], cwd = process.cwd()): ApiCom
         throw new AppError("BAD_REQUEST", `${token} requires key=value`, 400);
       }
       addQueryPair(query, value);
+      index += 1;
+      continue;
+    }
+
+    if (token === "--header" || token === "-H") {
+      const value = argv[index + 1];
+      if (!value) {
+        throw new AppError("BAD_REQUEST", `${token} requires key=value`, 400);
+      }
+      addKeyValuePair(headers, value, "--header");
       index += 1;
       continue;
     }
@@ -97,6 +109,7 @@ export function parseApiCommandArgs(argv: string[], cwd = process.cwd()): ApiCom
     method,
     path: normalizeApiPath(apiPath),
     query,
+    headers,
     body: body ?? (METHODS_WITH_OPTIONAL_BODY.has(method) ? undefined : undefined),
     output,
     json
@@ -107,6 +120,7 @@ export async function runApiCommand(context: CommandContext, argv: string[]): Pr
   const options = parseApiCommandArgs(argv, context.cwd);
   const payload = await gologinApiRequest<unknown>(context.config, options.method, options.path, {
     query: options.query,
+    headers: options.headers,
     body: options.body
   });
 
@@ -145,9 +159,13 @@ function normalizeApiPath(value: string): string {
 }
 
 function addQueryPair(query: ApiCommandOptions["query"], value: string): void {
+  addKeyValuePair(query, value, "--query");
+}
+
+function addKeyValuePair(query: ApiCommandOptions["query"], value: string, flagName: string): void {
   const splitAt = value.indexOf("=");
   if (splitAt <= 0) {
-    throw new AppError("BAD_REQUEST", "--query must be key=value", 400);
+    throw new AppError("BAD_REQUEST", `${flagName} must be key=value`, 400);
   }
 
   const key = value.slice(0, splitAt);

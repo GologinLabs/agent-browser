@@ -45,6 +45,8 @@ test("parseApiCommandArgs parses method, path, query, and JSON body", () => {
     "workspaceId=w1",
     "--query",
     "dryRun=true",
+    "--header",
+    "cf-ipcountry=US",
     "--data",
     "{\"mode\":\"gologin\"}"
   ]);
@@ -52,6 +54,7 @@ test("parseApiCommandArgs parses method, path, query, and JSON body", () => {
   assert.equal(parsed.method, "PATCH");
   assert.equal(parsed.path, "/browser/p1/proxy");
   assert.deepEqual(parsed.query, { workspaceId: "w1", dryRun: true });
+  assert.deepEqual(parsed.headers, { "cf-ipcountry": "US" });
   assert.deepEqual(parsed.body, { mode: "gologin" });
 });
 
@@ -69,13 +72,16 @@ test("runApiCommand calls arbitrary GoLogin API endpoints without daemon", async
       "GET",
       "/browser/profile-1",
       "--query",
-      "includeFolders=false"
+      "includeFolders=false",
+      "--header",
+      "cf-ipcountry=US"
     ]);
 
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, "https://api.gologin.com/browser/profile-1?includeFolders=false");
     assert.equal(calls[0].init?.method, "GET");
     assert.equal((calls[0].init?.headers as Record<string, string>).Authorization, "Bearer token-123");
+    assert.equal((calls[0].init?.headers as Record<string, string>)["cf-ipcountry"], "US");
     assert.deepEqual(JSON.parse(context.stdoutText()), { id: "profile-1" });
   } finally {
     globalThis.fetch = originalFetch;

@@ -31,6 +31,7 @@ test("gologinApiRequest sends bearer token, query, and JSON body", async () => {
   try {
     const payload = await gologinApiRequest<{ ok: boolean }>(makeConfig("token-123"), "POST", "/browser/test", {
       query: { workspaceId: "w1", days: 7, empty: undefined },
+      headers: { "cf-ipcountry": "US", skipped: undefined },
       body: { hello: "world" }
     });
 
@@ -40,6 +41,8 @@ test("gologinApiRequest sends bearer token, query, and JSON body", async () => {
     assert.equal(calls[0].init?.method, "POST");
     assert.equal((calls[0].init?.headers as Record<string, string>).Authorization, "Bearer token-123");
     assert.equal((calls[0].init?.headers as Record<string, string>)["Content-Type"], "application/json");
+    assert.equal((calls[0].init?.headers as Record<string, string>)["cf-ipcountry"], "US");
+    assert.equal((calls[0].init?.headers as Record<string, string>).skipped, undefined);
     assert.equal(calls[0].init?.body, "{\"hello\":\"world\"}");
   } finally {
     globalThis.fetch = originalFetch;

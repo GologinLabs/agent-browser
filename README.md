@@ -13,7 +13,7 @@ It is designed for agent loops that need to stay simple:
 - save artifacts such as screenshots and PDFs when needed
 - inspect daemon health with `doctor`
 - manage tabs, cookies, storage, and in-page eval without dropping to raw Playwright
-- call any GoLogin REST API endpoint through the raw `api` command, plus first-class shortcuts for the most common profile/proxy operations
+- manage GoLogin API resources through first-class commands, with raw `api` available only as a fallback
 - choose the runtime per task: cloud browser or local Orbita profile
 
 Unlike generic browser automation tools, it runs on top of GoLogin profiles, proxies, fingerprinting, anti-detect capabilities, and the same command model for cloud and local runtimes.
@@ -220,8 +220,16 @@ gologin-agent-browser back
 gologin-agent-browser forward
 gologin-agent-browser reload
 gologin-agent-browser screenshot page.png --annotate --press-escape
-gologin-agent-browser api GET /browser/v2 --query page=1
-gologin-agent-browser api PATCH /browser/your-profile-id/proxy --data '{"mode":"gologin","autoProxyRegion":"us"}'
+gologin-agent-browser browser list --page 1
+gologin-agent-browser browser get your-profile-id
+gologin-agent-browser browser name your-profile-id --name "LinkedIn AE 01"
+gologin-agent-browser browser proxy your-profile-id --data '{"mode":"gologin","autoProxyRegion":"us"}'
+gologin-agent-browser browser cloud-start your-profile-id
+gologin-agent-browser browser cloud-stop your-profile-id
+gologin-agent-browser proxy list --json
+gologin-agent-browser proxy add-gologin your-profile-id --country us --type residential
+gologin-agent-browser workspace list --json
+gologin-agent-browser workspace profiles your-workspace-id --country US --offset 0
 gologin-agent-browser cloud-usage --profile your-profile-id
 gologin-agent-browser profile-cloud start your-profile-id
 gologin-agent-browser profile-cloud stop your-profile-id
@@ -230,8 +238,6 @@ gologin-agent-browser profile-cookies import your-profile-id cookies.json --clea
 gologin-agent-browser profile-fingerprint refresh your-profile-id
 gologin-agent-browser profile-ua latest --os mac
 gologin-agent-browser profile-ua update your-profile-id
-gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --type residential
-gologin-agent-browser profile-proxy traffic
 gologin-agent-browser profile-create "LinkedIn AE 01" --template linkedin --proxy-country us
 gologin-agent-browser profile-update your-profile-id --template smm --add-tags warm,logged-in
 gologin-agent-browser run ./examples/runbook-warmup.json --runtime local --profile your-profile-id
@@ -263,33 +269,73 @@ gologin-agent-browser close --all
 
 - Temporary cloud profiles support no proxy or a custom proxy host/port.
 - `--proxy-country` is not available for temporary cloud profiles.
-- If you need GoLogin country traffic, attach a managed proxy to a reusable profile with `profile-proxy add-gologin <profileId> --country us`, then pass `--profile`.
+- If you need GoLogin country traffic, attach a managed proxy to a reusable profile with `proxy add-gologin <profileId> --country us`, then pass `--profile`.
 - Do not invent free proxies as a fallback. If the proxy strategy matters, decide it before opening the session.
 
 REST-backed proxy commands do not require the daemon:
 
 ```bash
-gologin-agent-browser profile-proxy list --json
-gologin-agent-browser profile-proxy traffic
-gologin-agent-browser profile-proxy add-gologin your-profile-id --country us --type residential
+gologin-agent-browser proxy list --json
+gologin-agent-browser proxy traffic
+gologin-agent-browser proxy add-gologin your-profile-id --country us --type residential
 ```
 
-Any GoLogin REST API endpoint can be called directly when there is no first-class shortcut yet:
+## GoLogin API Resources
+
+GoLogin API resources are available as named CLI actions and do not start the browser daemon:
 
 ```bash
-gologin-agent-browser api GET /browser/v2 --query page=1
+gologin-agent-browser browser list --page 1
+gologin-agent-browser browser get your-profile-id
+gologin-agent-browser browser create --body-file ./profile.json
+gologin-agent-browser browser update your-profile-id --body-file ./profile-update.json
+gologin-agent-browser browser cookies your-profile-id --output cookies.json
+gologin-agent-browser browser cookies-update your-profile-id --data @cookies.json --clean-cookies true
+gologin-agent-browser browser fingerprints-refresh your-profile-id another-profile-id
+gologin-agent-browser browser proxy your-profile-id --data '{"mode":"gologin","autoProxyRegion":"us"}'
+gologin-agent-browser browser cloud-start your-profile-id
+gologin-agent-browser browser cloud-stop your-profile-id
+gologin-agent-browser browser export --data '{"browserIds":["profile-id"]}' --output profiles.csv
+gologin-agent-browser workspace profiles your-workspace-id --country US --offset 0
+```
+
+The resource command groups cover the current GoLogin API surface:
+
+- `browser`: profiles, fingerprints, cookies, profile updates, cloud start/stop, clone, import/export
+- `proxy`: proxy CRUD, shared proxies, GoLogin managed proxy creation, traffic
+- `workspace`: workspaces, workspace profiles, member operations, transfers
+- `share`: profile and folder sharing operations
+- `template`: profile templates
+- `folder`: folders
+- `user`: user info and dev token creation
+- `deleted-profile`: list and restore deleted profiles
+
+For endpoints whose schema is broad or changes often, pass the API body with `--data '<json>'`, `--data @file.json`, or `--body-file file.json`. Common small updates also have direct flags, for example `browser name <id> --name ...`, `browser notes <id> --notes ...`, `workspace rename <id> --name ...`, and `proxy add-gologin <profileId> --country us`.
+
+Raw `api` is still available as an escape hatch:
+
+```bash
+gologin-agent-browser api GET /browser/v2 --query page=1 --header cf-ipcountry=US
 gologin-agent-browser api GET /browser/your-profile-id
 gologin-agent-browser api PUT /browser/your-profile-id --body-file ./profile-update.json
 gologin-agent-browser api PATCH /browser/your-profile-id/name --data '{"name":"LinkedIn AE 01"}'
 gologin-agent-browser api POST /browser/browsers.csv --data '{"browserIds":["profile-id"]}' --output profiles.csv
 ```
 
-`api` uses `GOLOGIN_TOKEN`, does not start the browser daemon, accepts repeated `--query key=value`, and accepts JSON bodies either inline (`--data '{"x":1}'`) or from a file (`--data @payload.json` / `--body-file payload.json`).
+`api` uses `GOLOGIN_TOKEN`, does not start the browser daemon, accepts repeated `--query key=value`, accepts API headers with `--header key=value`, and accepts JSON bodies either inline (`--data '{"x":1}'`) or from a file (`--data @payload.json` / `--body-file payload.json`).
 
 ## Commands
 
 - `doctor [--json]`
-- `api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]`
+- `api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--header k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]`
+- `browser <list|get|create|update|delete|cookies|proxy|cloud-start|cloud-stop|...> [args] [--data JSON|@file] [--json]`
+- `proxy <list|get|add-gologin|add-many|update|delete|traffic|...> [args] [--data JSON|@file] [--json]`
+- `workspace <list|get|create|rename|profiles|member-add|...> [args] [--data JSON|@file] [--json]`
+- `share <create|delete|create-many|delete-folder> [args] [--data JSON|@file] [--json]`
+- `template <list|create|update> [args] [--data JSON|@file] [--json]`
+- `folder <list|create> [args] [--data JSON|@file] [--json]`
+- `user <get|dev-token> [--data JSON|@file] [--json]`
+- `deleted-profile <list|restore> [--workspace <workspaceId>] [--offset <n>] [--data JSON|@file] [--json]`
 - `cloud-usage --profile <profileId> | --workspace <workspaceId> [--days <1-30>] [--json]`
 - `profile-cloud <start|stop> <profileId> [--json]`
 - `profile-cookies <export|import> <profileId> [cookies.json] [--output <path>] [--clean] [--json]`

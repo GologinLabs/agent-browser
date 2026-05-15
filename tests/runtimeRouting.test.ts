@@ -27,6 +27,9 @@ test("shouldRouteToLocalRuntime routes explicit local and local-only commands", 
 
 test("shouldRouteToLocalRuntime keeps REST API commands on the global CLI", () => {
   assert.equal(shouldRouteToLocalRuntime({ runtime: "local", args: ["api", "GET", "/user"] }), false);
+  assert.equal(shouldRouteToLocalRuntime({ runtime: "local", args: ["browser", "list"] }), false);
+  assert.equal(shouldRouteToLocalRuntime({ runtime: "local", args: ["proxy", "list"] }), false);
+  assert.equal(shouldRouteToLocalRuntime({ runtime: "local", args: ["workspace", "list"] }), false);
   assert.equal(shouldRouteToLocalRuntime({ runtime: "local", args: ["profile-proxy", "list"] }), false);
   assert.equal(shouldRouteToLocalRuntime({ runtime: "local", args: ["profile-ua", "latest"] }), false);
 });

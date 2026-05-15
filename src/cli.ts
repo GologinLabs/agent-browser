@@ -2,6 +2,16 @@
 
 import { runBackCommand } from "./commands/back";
 import { runApiCommand } from "./commands/api";
+import {
+  runBrowserApiCommand,
+  runDeletedProfileApiCommand,
+  runFolderApiCommand,
+  runProxyApiCommand,
+  runShareApiCommand,
+  runTemplateApiCommand,
+  runUserApiCommand,
+  runWorkspaceApiCommand
+} from "./commands/apiResources";
 import { runCheckCommand } from "./commands/check";
 import { runClickCommand } from "./commands/click";
 import { runCloseCommand } from "./commands/close";
@@ -53,6 +63,14 @@ import type { CommandContext } from "./lib/types";
 
 type CommandName =
   | "api"
+  | "browser"
+  | "proxy"
+  | "workspace"
+  | "share"
+  | "template"
+  | "folder"
+  | "user"
+  | "deleted-profile"
   | "open"
   | "doctor"
   | "cloud-usage"
@@ -99,7 +117,15 @@ type CommandName =
   | "current";
 
 const commandUsage: Record<CommandName, string> = {
-  api: "api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]",
+  api: "api <GET|POST|PUT|PATCH|DELETE> <path> [--query k=v] [--header k=v] [--data JSON|@file] [--body-file file] [--output file] [--json]",
+  browser: "browser <list|get|create|update|delete|cookies|proxy|cloud-start|cloud-stop|...> [args] [--data JSON|@file] [--header k=v] [--json]",
+  proxy: "proxy <list|get|add-gologin|add-many|update|delete|traffic|...> [args] [--data JSON|@file] [--header k=v] [--json]",
+  workspace: "workspace <list|get|create|rename|profiles|member-add|...> [args] [--data JSON|@file] [--header k=v] [--json]",
+  share: "share <create|delete|create-many|delete-folder> [args] [--data JSON|@file] [--json]",
+  template: "template <list|create|update> [args] [--data JSON|@file] [--json]",
+  folder: "folder <list|create> [args] [--data JSON|@file] [--json]",
+  user: "user <get|dev-token> [--data JSON|@file] [--json]",
+  "deleted-profile": "deleted-profile <list|restore> [--workspace <workspaceId>] [--offset <n>] [--data JSON|@file] [--json]",
   open: "open <url> [--profile <profileId>] [--session <sessionId>] [--idle-timeout-ms <ms>] [--proxy-host <host> --proxy-port <port> --proxy-mode <http|socks4|socks5>] (aliases: goto, navigate)",
   doctor: "doctor [--json]",
   "cloud-usage": "cloud-usage --profile <profileId> | --workspace <workspaceId> [--days <1-30>] [--json]",
@@ -185,6 +211,14 @@ function printCommandUsage(command: CommandName): void {
 function commandRequiresDaemon(command: CommandName): boolean {
   return !new Set<CommandName>([
     "api",
+    "browser",
+    "proxy",
+    "workspace",
+    "share",
+    "template",
+    "folder",
+    "user",
+    "deleted-profile",
     "doctor",
     "cloud-usage",
     "profile-cloud",
@@ -203,6 +237,30 @@ async function runCommand(command: CommandName, context: CommandContext, args: s
   switch (command) {
     case "api":
       await runApiCommand(context, args);
+      return;
+    case "browser":
+      await runBrowserApiCommand(context, args);
+      return;
+    case "proxy":
+      await runProxyApiCommand(context, args);
+      return;
+    case "workspace":
+      await runWorkspaceApiCommand(context, args);
+      return;
+    case "share":
+      await runShareApiCommand(context, args);
+      return;
+    case "template":
+      await runTemplateApiCommand(context, args);
+      return;
+    case "folder":
+      await runFolderApiCommand(context, args);
+      return;
+    case "user":
+      await runUserApiCommand(context, args);
+      return;
+    case "deleted-profile":
+      await runDeletedProfileApiCommand(context, args);
       return;
     case "open":
       await runOpenCommand(context, args);
@@ -358,6 +416,14 @@ function normalizeCommand(commandArg: string): CommandName | undefined {
 
   const directCommands = new Set<CommandName>([
     "api",
+    "browser",
+    "proxy",
+    "workspace",
+    "share",
+    "template",
+    "folder",
+    "user",
+    "deleted-profile",
     "open",
     "doctor",
     "cloud-usage",

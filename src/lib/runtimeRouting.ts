@@ -30,6 +30,14 @@ const localOnlyCommands = new Set([
 
 const cloudApiCommands = new Set([
   "api",
+  "browser",
+  "proxy",
+  "workspace",
+  "share",
+  "template",
+  "folder",
+  "user",
+  "deleted-profile",
   "cloud-usage",
   "profile-cloud",
   "profile-cookies",

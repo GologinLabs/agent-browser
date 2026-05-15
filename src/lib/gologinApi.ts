@@ -5,6 +5,7 @@ export const GOLOGIN_API_BASE = "https://api.gologin.com";
 
 type RequestOptions = {
   query?: Record<string, string | number | boolean | undefined>;
+  headers?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
 };
 
@@ -62,9 +63,17 @@ export async function gologinApiRequest<T>(
 ): Promise<T> {
   const token = requireToken(config);
   const hasBody = options.body !== undefined;
+  const extraHeaders: Record<string, string> = {};
+  for (const [key, value] of Object.entries(options.headers ?? {})) {
+    if (value !== undefined) {
+      extraHeaders[key] = String(value);
+    }
+  }
+
   const response = await fetch(buildApiUrl(path, options.query), {
     method,
     headers: {
+      ...extraHeaders,
       Authorization: `Bearer ${token}`,
       ...(hasBody ? { "Content-Type": "application/json" } : {})
     },
