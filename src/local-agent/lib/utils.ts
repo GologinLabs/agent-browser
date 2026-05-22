@@ -34,7 +34,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
     "clear",
     "remote",
     "local",
-    "all"
+    "all",
+    "discover"
   ]);
 
   for (let index = 0; index < argv.length; index += 1) {

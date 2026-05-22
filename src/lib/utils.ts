@@ -30,7 +30,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
     "clean",
     "all",
     "all-profiles",
-    "prune"
+    "prune",
+    "discover"
   ]);
 
   for (let index = 0; index < argv.length; index += 1) {

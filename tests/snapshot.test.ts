@@ -38,6 +38,15 @@ const candidates: RawSnapshotCandidate[] = [
     role: "combobox",
     accessibleName: "Plan",
     selectedText: "Pro"
+  },
+  {
+    kind: "input",
+    tag: "input",
+    role: "textbox",
+    inputType: "file",
+    accept: ".pdf,image/*",
+    multiple: true,
+    visible: false
   }
 ];
 
@@ -46,7 +55,7 @@ test("buildSnapshotModel assigns deterministic refs", () => {
 
   assert.deepEqual(
     snapshot.items.map((item) => item.ref),
-    ["@e1", "@e2", "@e3", "@e4", "@e5"]
+    ["@e1", "@e2", "@e3", "@e4", "@e5", "@e6"]
   );
   assert.equal(snapshot.items[0]?.text, "Example Domain");
 });
@@ -56,7 +65,7 @@ test("buildSnapshotModel filters to interactive elements", () => {
 
   assert.deepEqual(
     snapshot.items.map((item) => item.kind),
-    ["link", "checkbox", "select"]
+    ["link", "checkbox", "select", "input"]
   );
 });
 
@@ -65,4 +74,6 @@ test("buildSnapshotModel includes flags for control state", () => {
 
   assert.deepEqual(snapshot.items[1]?.flags, ["checked"]);
   assert.deepEqual(snapshot.items[2]?.flags, ["selected=Pro"]);
+  assert.equal(snapshot.items[3]?.text, "file upload");
+  assert.deepEqual(snapshot.items[3]?.flags, ["upload", "file-input", "hidden", "multiple", "accept=.pdf,image/*"]);
 });

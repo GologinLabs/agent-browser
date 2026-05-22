@@ -188,7 +188,7 @@ const commandSpecs: Record<CommandName, CommandSpec> = {
     usage: "find <role|text|label|placeholder|first|last|nth> ... [--exact]"
   },
   upload: {
-    usage: "upload <target> <file...> [--session <sessionId>]"
+    usage: "upload <target> <file...> [--session <sessionId>] | upload --discover [--session <sessionId>]"
   },
   pdf: {
     usage: "pdf <path> [--session <sessionId>]"

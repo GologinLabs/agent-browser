@@ -1,6 +1,6 @@
 {
   "name": "gologin-agent-browser-cli",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Agent-native GoLogin browser automation CLI with cloud and local Orbita runtimes",
   "main": "dist/cli.js",
   "types": "dist/lib/types.d.ts",

@@ -140,14 +140,19 @@ async function pickContextAndPage(browser: SessionRecord["browser"]): Promise<{
   return { context: existingContext, page };
 }
 
-async function ensureLocatorReady(locator: Locator, description: string, timeoutMs: number): Promise<Locator> {
+async function ensureLocatorReady(
+  locator: Locator,
+  description: string,
+  timeoutMs: number,
+  options: { visible?: boolean } = {}
+): Promise<Locator> {
   const count = await locator.count();
   if (count === 0) {
     throw new AppError("BAD_REQUEST", `${description} did not match any element`, 404);
   }
 
   const resolved = locator.first();
-  await resolved.waitFor({ state: "visible", timeout: timeoutMs });
+  await resolved.waitFor({ state: options.visible === false ? "attached" : "visible", timeout: timeoutMs });
   return resolved;
 }
 
@@ -592,6 +597,28 @@ async function locatorFromRole(page: Page, descriptor: RefDescriptor): Promise<L
   return undefined;
 }
 
+async function locatorFromFileInput(page: Page, descriptor: RefDescriptor): Promise<Locator | undefined> {
+  if (descriptor.tag !== "input" || descriptor.inputType?.toLowerCase() !== "file") {
+    return undefined;
+  }
+
+  const locator = page.locator('input[type="file"]');
+  const count = await locator.count();
+  if (count === 0) {
+    return undefined;
+  }
+  if (descriptor.fileInputIndex !== undefined && descriptor.fileInputIndex < count) {
+    return locator.nth(descriptor.fileInputIndex);
+  }
+  if (count === 1) {
+    return locator.first();
+  }
+  if (descriptor.nth !== undefined && descriptor.nth < count) {
+    return locator.nth(descriptor.nth);
+  }
+  return undefined;
+}
+
 async function locatorFromLabel(page: Page, descriptor: RefDescriptor): Promise<Locator | undefined> {
   const label = descriptor.ariaLabel ?? descriptor.accessibleName;
   if (!label) {
@@ -668,6 +695,7 @@ async function locatorFromFallbackTag(page: Page, descriptor: RefDescriptor): Pr
 
 export async function resolveDescriptorLocator(page: Page, descriptor: RefDescriptor): Promise<Locator> {
   const strategies = [
+    locatorFromFileInput,
     locatorFromRole,
     locatorFromLabel,
     locatorFromPlaceholder,
@@ -692,8 +720,13 @@ export async function resolveDescriptorLocator(page: Page, descriptor: RefDescri
   );
 }
 
-export async function resolveSelectorLocator(page: Page, selector: string, timeoutMs: number): Promise<Locator> {
-  return ensureLocatorReady(page.locator(selector), `selector ${selector}`, timeoutMs);
+export async function resolveSelectorLocator(
+  page: Page,
+  selector: string,
+  timeoutMs: number,
+  options: { visible?: boolean } = {}
+): Promise<Locator> {
+  return ensureLocatorReady(page.locator(selector), `selector ${selector}`, timeoutMs, options);
 }
 
 export async function resolveSemanticLocator(
@@ -865,7 +898,21 @@ export async function scrollLocatorIntoView(locator: Locator, timeoutMs: number)
 }
 
 export async function uploadFiles(locator: Locator, files: string[], timeoutMs: number): Promise<void> {
-  await locator.setInputFiles(files, { timeout: timeoutMs });
+  const resolved = locator.first();
+  await resolved.waitFor({ state: "attached", timeout: timeoutMs });
+  const isFileInput = await resolved.evaluate((element) => {
+    return element instanceof HTMLInputElement && element.type.toLowerCase() === "file";
+  });
+
+  if (!isFileInput) {
+    throw new AppError(
+      "UPLOAD_TARGET_NOT_FILE_INPUT",
+      "Upload target is not an input[type=file]. Run `gologin-agent-browser upload --discover` or `snapshot -i`, then use the upload ref or a CSS selector like `input[type=\"file\"]`.",
+      400
+    );
+  }
+
+  await resolved.setInputFiles(files, { timeout: timeoutMs });
 }
 
 export async function savePdf(page: Page, targetPath: string): Promise<void> {

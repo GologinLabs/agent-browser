@@ -42,11 +42,23 @@ function buildCandidateKey(candidate: RawSnapshotCandidate): string {
     normalizeWhitespace(candidate.placeholder) ?? "",
     normalizeWhitespace(candidate.name) ?? "",
     normalizeWhitespace(candidate.href) ?? "",
-    normalizeWhitespace(candidate.inputType) ?? ""
+    normalizeWhitespace(candidate.inputType) ?? "",
+    normalizeWhitespace(candidate.accept) ?? "",
+    candidate.multiple === true ? "multiple" : ""
   ].join("|");
 }
 
 function candidateText(candidate: RawSnapshotCandidate): string | undefined {
+  const inputType = normalizeWhitespace(candidate.inputType)?.toLowerCase();
+  if (candidate.tag === "input" && inputType === "file") {
+    return (
+      normalizeWhitespace(candidate.accessibleName) ??
+      normalizeWhitespace(candidate.placeholder) ??
+      normalizeWhitespace(candidate.name) ??
+      "file upload"
+    );
+  }
+
   return (
     normalizeWhitespace(candidate.accessibleName) ??
     normalizeWhitespace(candidate.text) ??
@@ -89,6 +101,15 @@ export function buildSnapshotModel(
       flags: [
         ...(candidate.checked === true ? ["checked"] : []),
         ...(candidate.disabled === true ? ["disabled"] : []),
+        ...(candidate.tag === "input" && normalizeWhitespace(candidate.inputType)?.toLowerCase() === "file"
+          ? [
+              "upload",
+              "file-input",
+              ...(candidate.visible === false ? ["hidden"] : []),
+              ...(candidate.multiple === true ? ["multiple"] : []),
+              ...(normalizeWhitespace(candidate.accept) ? [`accept=${normalizeWhitespace(candidate.accept)}`] : [])
+            ]
+          : []),
         ...(normalizeWhitespace(candidate.selectedText) ? [`selected=${normalizeWhitespace(candidate.selectedText)}`] : [])
       ]
     });
@@ -103,6 +124,10 @@ export function buildSnapshotModel(
       ariaLabel: normalizeWhitespace(candidate.ariaLabel),
       placeholder: normalizeWhitespace(candidate.placeholder),
       inputType: normalizeWhitespace(candidate.inputType),
+      accept: normalizeWhitespace(candidate.accept),
+      multiple: candidate.multiple,
+      visible: candidate.visible,
+      fileInputIndex: candidate.fileInputIndex,
       name: normalizeWhitespace(candidate.name),
       href: normalizeWhitespace(candidate.href),
       nth,
@@ -159,6 +184,10 @@ export async function buildSnapshot(page: Page, options: SnapshotOptions = {}): 
         rect.width > 0 &&
         rect.height > 0
       );
+    }
+
+    function isFileInput(element: Element): boolean {
+      return element instanceof HTMLInputElement && element.type.toLowerCase() === "file";
     }
 
     function implicitRole(element: Element): string | undefined {
@@ -269,9 +298,13 @@ export async function buildSnapshot(page: Page, options: SnapshotOptions = {}): 
     }
 
     const result: RawSnapshotCandidate[] = [];
+    let fileInputIndex = 0;
 
     for (const element of Array.from(document.querySelectorAll(selectors))) {
-      if (seen.has(element) || !isVisible(element)) {
+      const visible = isVisible(element);
+      const fileInput = isFileInput(element);
+      const currentFileInputIndex = fileInput ? fileInputIndex++ : undefined;
+      if (seen.has(element) || (!visible && !fileInput)) {
         continue;
       }
 
@@ -298,6 +331,8 @@ export async function buildSnapshot(page: Page, options: SnapshotOptions = {}): 
           ? normalize(element.placeholder)
           : undefined;
       const inputType = element instanceof HTMLInputElement ? normalize(element.type) : undefined;
+      const accept = element instanceof HTMLInputElement ? normalize(element.accept) : undefined;
+      const multiple = element instanceof HTMLInputElement ? element.multiple : undefined;
       const name =
         element instanceof HTMLInputElement ||
         element instanceof HTMLTextAreaElement ||
@@ -339,6 +374,10 @@ export async function buildSnapshot(page: Page, options: SnapshotOptions = {}): 
         ariaLabel,
         placeholder,
         inputType,
+        accept,
+        multiple,
+        visible,
+        fileInputIndex: currentFileInputIndex,
         name,
         href,
         checked,

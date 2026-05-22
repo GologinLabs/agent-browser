@@ -211,6 +211,7 @@ gologin-agent-browser check "input[name='terms']"
 gologin-agent-browser uncheck "input[name='newsletter']"
 gologin-agent-browser scrollintoview "#submit"
 gologin-agent-browser find label "Email" fill "test@example.com"
+gologin-agent-browser upload --discover
 gologin-agent-browser upload "input[type='file']" /absolute/path/to/avatar.png
 gologin-agent-browser wait --text "Welcome"
 gologin-agent-browser cookies --json
@@ -386,6 +387,7 @@ gologin-agent-browser api POST /browser/browsers.csv --data '{"browserIds":["pro
 - `reload [--session <sessionId>]`
 - `find <role|text|label|placeholder|first|last|nth> ...`
 - `upload <target> <file...> [--session <sessionId>]`
+- `upload --discover [--session <sessionId>]`
 - `pdf <path> [--session <sessionId>]`
 - `screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]`
 - `close [--session <sessionId>]`
@@ -419,6 +421,24 @@ When a daemon is reachable, `doctor` also reports:
 - the active session id, if there is one
 
 `open` now performs an HTTP preflight against the Cloud Browser connect URL before the Playwright CDP handshake. That means common `403` and `503` launch failures surface early with a readable reason instead of being buried inside a generic connection error.
+
+## File Uploads
+
+`upload` sets files on a real `input[type=file]`. It does not drive the operating system's native file picker. If the page shows a styled upload button, discover the underlying input first:
+
+```bash
+gologin-agent-browser snapshot -i
+gologin-agent-browser upload --discover
+gologin-agent-browser upload @e4 /absolute/path/to/document.pdf
+```
+
+You can also use a CSS selector directly:
+
+```bash
+gologin-agent-browser upload 'input[type="file"]' /absolute/path/to/document.pdf
+```
+
+Hidden file inputs are supported. `snapshot -i` and `upload --discover` mark upload candidates with `[upload] [file-input]`, and hidden candidates with `[hidden]`.
 
 ## Example Session Flow
 

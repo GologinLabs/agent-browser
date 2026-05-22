@@ -13,6 +13,7 @@ export type ErrorCode =
   | "SCREENSHOT_FAILED"
   | "PDF_FAILED"
   | "UPLOAD_FAILED"
+  | "UPLOAD_TARGET_NOT_FILE_INPUT"
   | "BAD_REQUEST"
   | "INTERNAL_ERROR";
 

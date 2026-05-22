@@ -317,6 +317,14 @@ export class SessionManager {
     return resolveSelectorLocator(session.page, target, this.config.actionTimeoutMs);
   }
 
+  private async resolveUploadLocator(session: SessionRecord, target: string) {
+    if (isRefTarget(target)) {
+      return this.resolveTargetLocator(session, target);
+    }
+
+    return resolveSelectorLocator(session.page, target, this.config.actionTimeoutMs, { visible: false });
+  }
+
   private async runTargetAction(
     session: SessionRecord,
     target: string,
@@ -620,11 +628,15 @@ export class SessionManager {
 
   async upload(sessionId: string | undefined, target: string, files: string[]): Promise<UploadResponse> {
     const session = await this.getSessionOrThrow(sessionId);
-    const locator = await this.resolveTargetLocator(session, target);
+    const locator = await this.resolveUploadLocator(session, target);
     try {
       await uploadFiles(locator, files, this.config.actionTimeoutMs);
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       throw new AppError("UPLOAD_FAILED", error instanceof Error ? error.message : String(error), 500, {
+        target,
         files
       });
     }

@@ -164,7 +164,7 @@ const commandUsage: Record<CommandName, string> = {
   forward: "forward [--session <sessionId>]",
   reload: "reload [--session <sessionId>]",
   find: "find <role|text|label|placeholder|first|last|nth> ... [--exact]",
-  upload: "upload <target> <file...> [--session <sessionId>]",
+  upload: "upload <target> <file...> [--session <sessionId>] | upload --discover [--session <sessionId>]",
   pdf: "pdf <path> [--session <sessionId>]",
   screenshot: "screenshot <path> [--annotate] [--press-escape] [--session <sessionId>]",
   close: "close [--session <sessionId>] [--all] (aliases: quit, exit)",

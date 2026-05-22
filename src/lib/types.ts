@@ -78,6 +78,10 @@ export interface RefDescriptor {
   ariaLabel?: string;
   placeholder?: string;
   inputType?: string;
+  accept?: string;
+  multiple?: boolean;
+  visible?: boolean;
+  fileInputIndex?: number;
   name?: string;
   href?: string;
   nth?: number;
@@ -486,6 +490,10 @@ export interface RawSnapshotCandidate {
   ariaLabel?: string;
   placeholder?: string;
   inputType?: string;
+  accept?: string;
+  multiple?: boolean;
+  visible?: boolean;
+  fileInputIndex?: number;
   name?: string;
   href?: string;
   checked?: boolean;
