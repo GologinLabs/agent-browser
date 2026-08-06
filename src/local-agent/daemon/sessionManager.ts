@@ -7,7 +7,6 @@ import { generateSessionId, isRefTarget } from "../lib/utils";
 import type {
   ActionResponse,
   AgentConfig,
-  BrowserCookie,
   CheckResponse,
   ClickResponse,
   CloseSessionResponse,
@@ -819,7 +818,7 @@ export class SessionManager {
     };
   }
 
-  async cookiesImport(sessionId: string | undefined, cookies: BrowserCookie[]): Promise<CookiesImportResponse> {
+  async cookiesImport(sessionId: string | undefined, cookies: unknown): Promise<CookiesImportResponse> {
     const session = await this.getSessionOrThrow(sessionId);
     const imported = await importCookies(session, cookies);
     this.markSessionState(session);

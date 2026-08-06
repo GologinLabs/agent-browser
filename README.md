@@ -215,6 +215,7 @@ gologin-agent-browser upload --discover
 gologin-agent-browser upload "input[type='file']" /absolute/path/to/avatar.png
 gologin-agent-browser wait --text "Welcome"
 gologin-agent-browser cookies --json
+gologin-agent-browser cookies-import cookies.json
 gologin-agent-browser storage-export /tmp/storage.json
 gologin-agent-browser eval "document.title" --json
 gologin-agent-browser back
@@ -265,6 +266,12 @@ gologin-agent-browser close --all
 ```
 
 `close --all` only closes sessions tracked by the current daemon. If cloud capacity is still exhausted afterward, another daemon or external workflow is likely holding the remaining slot.
+
+## Cookie Formats
+
+`cookies-import` imports cookies into the currently running browser session. It accepts Playwright cookie JSON and GoLogin-exported/API cookie JSON, including GoLogin `sameSite` values such as `no_restriction` and `unspecified`, and GoLogin `expirationDate`.
+
+Use `profile-cookies import <profileId> cookies.json --clean` when you want to write GoLogin profile cookies through the GoLogin API before launching a browser session.
 
 ## Proxy Rules
 

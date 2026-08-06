@@ -1,5 +1,5 @@
 import { AppError } from "../lib/errors";
-import type { BrowserCookie, CommandContext, CookiesImportResponse } from "../lib/types";
+import type { CommandContext, CookiesImportResponse } from "../lib/types";
 import { getFlagString, parseArgs } from "../lib/utils";
 import { readJsonFile, resolveSessionId } from "./shared";
 
@@ -16,10 +16,7 @@ export async function runCookiesImportCommand(context: CommandContext, argv: str
     );
   }
 
-  const cookies = readJsonFile<BrowserCookie[]>(context, cookiesPath);
-  if (!Array.isArray(cookies)) {
-    throw new AppError("BAD_REQUEST", `${cookiesPath} must contain a JSON array of cookies`, 400);
-  }
+  const cookies = readJsonFile<unknown>(context, cookiesPath);
 
   const resolvedSessionId = await resolveSessionId(context, sessionId);
   const response = await context.client.request<CookiesImportResponse>(

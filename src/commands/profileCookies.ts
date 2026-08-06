@@ -1,4 +1,5 @@
 import { readJsonFile, writeJsonFile, writeJsonStdout } from "./shared";
+import { extractCookieArray } from "../lib/cookieNormalizer";
 import { AppError } from "../lib/errors";
 import { gologinApiRequest } from "../lib/gologinApi";
 import type { CommandContext } from "../lib/types";
@@ -39,10 +40,7 @@ export async function runProfileCookiesCommand(context: CommandContext, argv: st
   if (!cookiesPath) {
     throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser profile-cookies import <profileId> <cookies.json> [--clean]", 400);
   }
-  const cookies = readJsonFile<ProfileCookie[]>(context, cookiesPath);
-  if (!Array.isArray(cookies)) {
-    throw new AppError("BAD_REQUEST", "Cookie import file must contain a JSON array", 400);
-  }
+  const cookies = extractCookieArray(readJsonFile<unknown>(context, cookiesPath)) as ProfileCookie[];
   const cleanCookies = getFlagBoolean(parsed, "clean");
   await gologinApiRequest<unknown>(context.config, "POST", `/browser/${profileId}/cookies`, {
     query: {

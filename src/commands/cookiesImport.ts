@@ -1,5 +1,5 @@
 import { AppError } from "../lib/errors";
-import type { BrowserCookie, CommandContext, CookiesImportResponse } from "../lib/types";
+import type { CommandContext, CookiesImportResponse } from "../lib/types";
 import { getFlagString, parseArgs } from "../lib/utils";
 import { readJsonFile, resolveSessionId } from "./shared";
 
@@ -12,7 +12,7 @@ export async function runCookiesImportCommand(context: CommandContext, argv: str
     throw new AppError("BAD_REQUEST", "Usage: gologin-agent-browser cookies-import <cookies.json> [--session <sessionId>]", 400);
   }
 
-  const cookies = readJsonFile<BrowserCookie[]>(context, cookiesPath);
+  const cookies = readJsonFile<unknown>(context, cookiesPath);
   const resolvedSessionId = await resolveSessionId(context, sessionId);
   const response = await context.client.request<CookiesImportResponse>(
     "POST",

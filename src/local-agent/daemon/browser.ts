@@ -2,6 +2,7 @@ import { execFile as execFileCallback } from "node:child_process";
 import { chromium, type Locator, type Page } from "playwright";
 import { promisify } from "node:util";
 
+import { normalizeCookiesForPlaywright } from "../../lib/cookieNormalizer";
 import { AppError } from "../lib/errors";
 import { detectLocalOsInfo } from "../lib/runtime";
 import type {
@@ -1068,9 +1069,10 @@ export async function readCookies(session: SessionRecord): Promise<CookiesRespon
     );
 }
 
-export async function importCookies(session: SessionRecord, cookies: BrowserCookie[]): Promise<number> {
-  await session.context.addCookies(cookies as never);
-  return cookies.length;
+export async function importCookies(session: SessionRecord, cookies: unknown): Promise<number> {
+  const normalizedCookies = normalizeCookiesForPlaywright(cookies);
+  await session.context.addCookies(normalizedCookies);
+  return normalizedCookies.length;
 }
 
 export async function clearCookies(session: SessionRecord): Promise<number> {

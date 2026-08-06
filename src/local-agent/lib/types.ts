@@ -530,7 +530,7 @@ export interface CookiesResponse {
 }
 
 export interface CookiesImportRequest {
-  cookies: BrowserCookie[];
+  cookies: unknown;
 }
 
 export interface CookiesImportResponse extends ActionResponse {
