@@ -143,6 +143,48 @@ gologin-agent-browser click @e3
 gologin-agent-browser close
 ```
 
+## Puppeteer Cloud Browser Example
+
+This example shows how to connect to GoLogin Cloud Browser from an external Puppeteer script using the same connect semantics used by the repo itself: build a Cloud Browser connect URL, preflight it, convert it to a WebSocket endpoint, then call `puppeteer.connect()`.
+
+Prerequisites:
+
+```bash
+npm install
+```
+
+Set the environment variable:
+
+```bash
+export GOLOGIN_TOKEN='your_gologin_token'
+```
+
+Optional: use an existing GoLogin profile instead of creating a temporary one:
+
+```bash
+export GOLOGIN_PROFILE_ID='your_profile_id'
+```
+
+Run the example:
+
+```bash
+node examples/puppeteer-cloud-browser.mjs
+```
+
+Expected output:
+
+```text
+Connected to GoLogin Cloud Browser
+Page title: Example Domain
+Disconnected
+```
+
+Temporary profile behavior:
+
+- If `GOLOGIN_PROFILE_ID` is not set, the example creates a temporary profile through the GoLogin API and deletes it in `finally`.
+- If `GOLOGIN_PROFILE_ID` is set by the user, the example leaves that profile alone and only disconnects the browser session.
+- The script never prints the token or the authenticated connect URL.
+
 Local profile quickstart:
 
 ```bash
